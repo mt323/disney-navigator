@@ -944,7 +944,8 @@ function buildFullExportJSON(includeLive) {
       'To update individual schedule items without replacing the whole schedule, use "scheduleUpdates" instead of "schedule". Each item must have an "id" matching an existing schedule item \u2014 only included fields are overwritten.',
       'scheduleUpdates example: { "plan": { "scheduleUpdates": [{ "id": "rise", "wait": 45 }] } }',
       'You can also output the full export wrapper format with all sections if preferred.',
-      'The securedLLWindows show LL return windows the user has already booked — respect these times when scheduling.'
+      'The securedLLWindows show LL return windows the user has already booked — respect these times when scheduling.',
+      'IMPORTANT: Keep completed rides in the schedule — do not remove them. The app needs them for display. Only reorganize the remaining uncompleted items.'
     ].join(' '),
     _schema: {
       'meta': '{ title: string, date: string, cost: string }',
@@ -1063,7 +1064,7 @@ function exportPlan() {
     prompt += `The wishlisted rides in the data are ones I want to do \u2014 work them into the plan if possible.\n\n`;
   }
 
-  prompt += `Based on the current data (live wait times, LL return windows, secured LL windows, completed rides, and wishlisted rides), give me the best updated plan for the rest of the day. Optimize for:\n`;
+  prompt += `Based on the current data (live wait times, LL return windows, secured LL windows, completed rides, and wishlisted rides), give me the best updated plan. Keep all completed rides in the schedule (the app needs them). Only reorganize and optimize the remaining rides. Optimize for:\n`;
   prompt += `- Minimizing wait times by hitting low-wait rides first\n`;
   prompt += `- Using LL windows effectively\n`;
   prompt += `- The securedLLWindows show LL return windows I've already booked — respect these times\n`;
@@ -1156,7 +1157,15 @@ function importPlan() {
     // Merge: only overwrite sections that are present
     const updatedParts = [];
     if (newPlan.meta) { planData.meta = { ...planData.meta, ...newPlan.meta }; updatedParts.push('meta'); }
-    if (newPlan.schedule) { planData.schedule = newPlan.schedule; updatedParts.push('schedule'); }
+    if (newPlan.schedule) {
+      // Re-inject completed rides that Claude may have dropped
+      const partialNewIds = new Set(newPlan.schedule.map(s => s.id));
+      const partialMissing = planData.schedule.filter(s => completed[s.id] && !partialNewIds.has(s.id));
+      if (partialMissing.length > 0) {
+        newPlan.schedule = [...partialMissing, ...newPlan.schedule];
+      }
+      planData.schedule = newPlan.schedule; updatedParts.push('schedule');
+    }
     if (newPlan.llChain) { planData.llChain = newPlan.llChain; updatedParts.push('llChain'); }
     if (newPlan.mustDos) { planData.mustDos = newPlan.mustDos; updatedParts.push('mustDos'); }
     if (newPlan.contingencies) { planData.contingencies = newPlan.contingencies; updatedParts.push('contingencies'); }
@@ -1216,6 +1225,16 @@ function importPlan() {
     }
     completed = newCompleted;
     save();
+
+    // Re-inject completed rides that Claude may have dropped
+    const oldSchedule = planData.schedule;
+    const newSchedIds = new Set(newPlan.schedule.map(s => s.id));
+    const missingCompleted = oldSchedule.filter(s => completed[s.id] && !newSchedIds.has(s.id));
+    if (missingCompleted.length > 0) {
+      newPlan.schedule = [...missingCompleted, ...newPlan.schedule];
+      // Also restore their completed state (they were removed from newCompleted above)
+      missingCompleted.forEach(s => { completed[s.id] = true; });
+    }
 
     // Save plan to localStorage
     planData = newPlan;
