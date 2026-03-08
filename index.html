@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a1a">
+<title>Disneyland Navigator — March 16</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <h1 id="appTitle">Disneyland Navigator</h1>
+    <button class="gear-btn" onclick="openSettings()" aria-label="Settings">&#9881;</button>
+  </div>
+  <div class="date" id="appDate">Monday, March 16, 2026</div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText">0/17 rides</div>
+  </div>
+  <div class="cost" id="appCost">~$34/person · Lightning Lane Multi Pass</div>
+</div>
+
+<div class="view active" id="view-timeline"></div>
+<div class="view" id="view-chain"></div>
+<div class="view" id="view-mustdos"></div>
+<div class="view" id="view-tips"></div>
+
+<nav class="tabs">
+  <button class="tab active" data-view="timeline"><span class="tab-icon">&#x1F4CB;</span>Timeline</button>
+  <button class="tab" data-view="chain"><span class="tab-icon">&#x26A1;</span>LL Chain</button>
+  <button class="tab" data-view="mustdos"><span class="tab-icon">&#x2B50;</span>Must-Dos</button>
+  <button class="tab" data-view="tips"><span class="tab-icon">&#x1F4A1;</span>Tips</button>
+</nav>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-header">
+    <h2>Settings</h2>
+    <button class="close-btn" onclick="closeSettings()" aria-label="Close">&#x2715;</button>
+  </div>
+
+  <div class="settings-section">
+    <h3>Export Plan</h3>
+    <p>Copy your plan + progress as JSON to share with Claude. Claude can return the full plan or just the sections that changed.</p>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="exportLiveWaits" checked> Include live wait times
+    </label>
+    <div class="settings-btns">
+      <button class="settings-btn btn-primary" onclick="exportPlan()">Copy to Clipboard</button>
+    </div>
+    <textarea class="settings-textarea" id="exportArea" readonly style="margin-top:10px;display:none;"></textarea>
+    <div id="exportMsg"></div>
+  </div>
+
+  <div class="settings-section">
+    <h3>Import Plan</h3>
+    <p>Paste updated JSON from Claude. Supports full plans or partial updates (only changed sections).</p>
+    <textarea class="settings-textarea" id="importArea" placeholder="Paste JSON here..."></textarea>
+    <div class="settings-btns" style="margin-top:10px;">
+      <button class="settings-btn btn-primary" onclick="importPlan()">Import Plan</button>
+    </div>
+    <div id="importMsg"></div>
+  </div>
+
+  <div class="settings-section">
+    <h3>Live Wait Times</h3>
+    <p id="liveWaitsStatus">Checking...</p>
+  </div>
+
+  <div class="settings-section">
+    <h3>Reset</h3>
+    <p>Restore the default built-in plan and clear any imported data.</p>
+    <div class="settings-btns">
+      <button class="settings-btn btn-danger" onclick="resetPlan()">Reset to Default</button>
+    </div>
+    <div id="resetMsg"></div>
+  </div>
+</div>
+
+<div class="action-overlay" id="actionOverlay" onclick="closeActions()">
+  <div class="action-sheet" onclick="event.stopPropagation()">
+    <div id="actionSheetBody"></div>
+    <button class="action-cancel" onclick="closeActions()">Cancel</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="plan-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

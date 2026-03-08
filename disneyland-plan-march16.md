@@ -10,10 +10,10 @@
 
 - **Lightning Lane Multi Pass** (~$34/pp): Chain 9 LL rides across both parks
 - **Single Rider x4**: Radiator Springs, Web Slingers, Indiana Jones, Smuggler's Run — faster than standby, frees up LL slots
-- **Standby x2**: Pirates (always short) + Rise of the Resistance (Monday evening dip)
+- **Standby x4**: Pirates (always short), Rise of the Resistance (Monday evening dip), Star Tours, Mr. Toad's Wild Ride
 - **No Single Passes needed**: SR on Radiator Springs beats the $20-22 Single Pass. Rise standby timed for evening low point
 
-**Why this works:** The original plan used LL on Indiana Jones and Web Slingers. Both now have single rider lines. Swapping them to SR frees 2 LL slots — one goes to **Tiana's Bayou Adventure** (absent from the old plan), the other to **Buzz Lightyear** via LL instead of standby.
+**Why this works:** The original plan used LL on Indiana Jones and Web Slingers. Both now have single rider lines. Swapping them to SR frees 2 LL slots — one goes to **Tiana's Bayou Adventure** (absent from the old plan), the other to **Buzz Lightyear** via LL instead of standby. Adding Star Tours and Mr. Toad's Wild Ride as standby bumps the total to 17 rides.
 
 ---
 
@@ -82,37 +82,38 @@ Hit Radiator Springs SR first — the single rider line grows fast as the park f
 
 ---
 
-## Disneyland (2:00 - 8:00) — 10 rides
+## Disneyland (2:00 - 8:30) — 12 rides
 
-**Walking path: Adventureland → Critter Country → New Orleans Sq → Frontierland → Tomorrowland → Fantasyland → Galaxy's Edge (one clean loop, minimal backtracking)**
+**Walking path: Adventureland → Critter Country → New Orleans Sq → Frontierland → Tomorrowland → Fantasyland → Tomorrowland → Galaxy's Edge**
 
 | Time | Action | Method | Wait | Notes |
 |------|--------|--------|------|-------|
 | 2:00 | Enter Disneyland. Walk to Adventureland | — | 7 min | |
 | 2:10 | **Indiana Jones** | **SR** | 15-20 min | SR returned June 2025 — frees a LL slot |
-| 2:30 | Walk to Critter Country | — | 5 min | Through New Orleans Sq |
+| 2:33 | Walk to Critter Country | — | 5 min | Through New Orleans Sq |
 | 2:40 | **Tiana's Bayou Adventure** | LL | 10 min | Tap in → book LL #5: Haunted Mansion |
-| 2:55 | Walk to New Orleans Square | — | 3 min | |
-| 3:00 | **Haunted Mansion** | LL | 10 min | Tap in → book LL #6: Big Thunder. Check status — may have Virtual Queue due to construction |
-| 3:15 | **Pirates of the Caribbean** | Standby | 15 min | Low wait, right next door. Good cooldown |
-| 3:35 | Walk to Frontierland | — | 3 min | |
-| 3:40 | **Big Thunder Mountain** | LL | 10 min | Tap in → book LL #7: Space Mountain |
-| 3:55 | Walk to Tomorrowland | — | 10 min | Cross the hub |
-| 4:10 | **Space Mountain** | LL | 10 min | Tap in → book LL #8: Matterhorn |
-| 4:25 | Walk to Fantasyland | — | 5 min | |
-| 4:30 | **Matterhorn Bobsleds** | LL | 10 min | Tap in → book LL #9: Buzz Lightyear |
-| 4:45 | Walk to Tomorrowland | — | 3 min | |
-| 4:50 | **Buzz Lightyear** | LL | 5 min | Last LL of the day |
-| 5:00 | **Dinner** | — | 45 min | Docking Bay 7 (Galaxy's Edge) or Bengal BBQ (Adventureland). Mobile order at 4:30 |
-| 5:45 | Walk to Galaxy's Edge | — | 5-10 min | |
-| 5:55 | **Smuggler's Run** | **SR/DR** | 10-15 min | Double rider option — pairs can stay together |
-| 6:15 | Explore Galaxy's Edge | — | 15 min | Blue/green milk, soak it in |
-| 6:30 | **Rise of the Resistance** | Standby | 50-60 min | Monday evening dip. The queue itself is an experience |
-| 7:25 | Experience Rise (~18 min with pre-shows) | — | — | |
-| 7:45 | Free time — Main Street shopping, grab a churro | — | 15 min | |
-| 8:00 | Head out | — | — | |
+| 2:53 | Walk to New Orleans Square | — | 3 min | |
+| 2:58 | **Haunted Mansion** | LL | 10 min | Tap in → book LL #6: Big Thunder. Check status — may have Virtual Queue due to construction |
+| 3:11 | **Pirates of the Caribbean** | Standby | 22 min | Right next door. Good cooldown |
+| 3:36 | Walk to Frontierland | — | 3 min | |
+| 3:41 | **Big Thunder Mountain** | LL | 10 min | Tap in → book LL #7: Space Mountain |
+| 3:54 | Walk to Tomorrowland | — | 10 min | Cross the hub |
+| 4:06 | **Space Mountain** | LL | 10 min | Tap in → book LL #8: Matterhorn |
+| 4:19 | **Star Tours** | Standby | 28 min | Right next door in Tomorrowland — NEW |
+| 4:50 | Walk to Fantasyland | — | 5 min | |
+| 4:57 | **Matterhorn Bobsleds** | LL | 10 min | Tap in → book LL #9: Buzz Lightyear |
+| 5:10 | **Mr. Toad's Wild Ride** | Standby | 20 min | Classic dark ride, right in Fantasyland — NEW |
+| 5:33 | Walk to Tomorrowland | — | 5 min | |
+| 5:40 | **Buzz Lightyear** | LL | 5 min | Last LL of the day |
+| 5:48 | Walk to Galaxy's Edge | — | 8 min | |
+| 5:58 | **Smuggler's Run** | **SR/DR** | 10-15 min | Double rider option — pairs can stay together |
+| 6:11 | Dinner — Docking Bay 7 | — | 35 min | Mobile order at 5:30 for pickup after Smuggler's Run |
+| 6:48 | **Rise of the Resistance** | Standby | 64 min | Monday evening dip. The queue itself is an experience |
+| 7:52 | Experience Rise (~18 min with pre-shows) | — | — | |
+| 8:10 | Free time — Main Street shopping, churros | — | 20 min | |
+| 8:30 | Head out | — | — | |
 
-**Disneyland total: 10 rides, ~2.5 hrs waiting, ~15 min free time**
+**Disneyland total: 12 rides, ~3.5 hrs waiting, ~20 min free time**
 
 ---
 
@@ -120,11 +121,11 @@ Hit Radiator Springs SR first — the single rider line grows fast as the park f
 
 | | This Plan | No LL ($0) | Full LL (~$76/pp) |
 |--|-----------|-----------|-----------------|
-| **Rides** | **15** | 9-10 | 16-17 |
-| **Time in lines** | **~3 hrs** | 5+ hrs | ~1.5 hrs |
+| **Rides** | **17** | 9-10 | 16-17 |
+| **Time in lines** | **~3.5 hrs** | 5+ hrs | ~1.5 hrs |
 | **Cost/person** | **~$34** | $0 | ~$76 |
 | **Cost for 3** | **~$102** | $0 | ~$228 |
-| **Free/chill time** | **~15 min** | ~0 min | ~90 min |
+| **Free/chill time** | **~20 min** | ~0 min | ~90 min |
 | **Must-dos hit** | All 7 | 5 of 7 | All 7 |
 
 **Value take:** For $34/pp you get 90% of the rides at 40% of the cost of Full LL. The 4 single rider lines do the heavy lifting.
@@ -148,8 +149,11 @@ Hit Radiator Springs SR first — the single rider line grows fast as the park f
 **If Haunted Mansion is Virtual Queue (construction):**
 Drop it from the LL chain. Book Tiana's → Big Thunder → Space Mountain → Matterhorn → Buzz → Star Tours. Join the Haunted Mansion VQ in the app when it drops.
 
+**If Jungle Cruise is open:**
+It may have reopened from refurbishment by March 2026. If open, consider swapping it for Mr. Toad's Wild Ride — it's right in Adventureland near Indiana Jones.
+
 **If Rise of the Resistance standby exceeds 70 min:**
-Check the app at 5:30. If it's 70+, consider riding Smuggler's Run first and checking again at 6:15. Monday evenings usually dip to 45-55 min by 6:30-7:00pm.
+Check the app at 6:00. If it's 70+, consider adjusting dinner timing or riding Star Tours again instead.
 
 **If a LL return window gets pushed way out:**
 Use the 2-hour rule — if your window is 2+ hours away, you can book your next LL exactly 120 min after your last booking without tapping in.
@@ -163,7 +167,7 @@ Use LL instead and redirect the freed SR time. Swap your LL chain to book Web Sl
 
 - **Buy Multi Pass on March 9** (7 days ahead, 7:00am PT) to lock in the lowest price
 - **Mobile order lunch** at 12:30 while walking to Incredicoaster — pickup at San Fransokyo Square after Soarin'
-- **Mobile order dinner** at 4:30 for Docking Bay 7 — walk straight in after Buzz
+- **Mobile order dinner** at 5:30 for Docking Bay 7 — pickup after Smuggler's Run
 - **Soarin' is currently "Over California"** for DCA's 25th anniversary (through July 1, 2026) — the original film, not "Around the World"
 - **Smuggler's Run double rider** — pairs of 2 can ride together now. You'll likely be engineers but the ride is still great
 - **Rise of the Resistance queue** is themed and incredible — don't rush through it
