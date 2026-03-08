@@ -69,6 +69,17 @@ let lastFetchTime = null;
 let llSlots = {};        // { scheduleId: { time: "16:25" | null, soldOut: bool, fetchedAt: Date } }
 let lastLLFetchTime = null;
 
+// ── All Rides Browser ────────────────────────────────
+let allRides = {};        // { "dl": [{ land, rides: [{ id, name, wait_time, is_open, ... }] }], "dca": [...] }
+let allRidesLL = {};      // { "{park}-{rideId}": { name, time, soldOut, park } }
+let rideWishlist = {};    // { "{park}-{rideId}": true } — persisted to localStorage
+let ridesSortMode = 'default'; // 'default' | 'wait' | 'score'
+let ridesFilter = 'all';      // 'all' | 'rides' | 'shows'
+
+const WISHLIST_KEY = 'disney-ride-wishlist';
+try { rideWishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY)) || {}; } catch(e) {}
+function saveWishlist() { localStorage.setItem(WISHLIST_KEY, JSON.stringify(rideWishlist)); }
+
 function normalizeRideName(name) {
   return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -121,6 +132,39 @@ async function fetchLiveWaits() {
       }
     });
 
+    // Store ALL rides grouped by land, folding Single Rider into parent ride
+    allRides = {};
+    [['dl', dlRes], ['dca', dcaRes]].forEach(([park, res]) => {
+      allRides[park] = [];
+      if (res && res.lands) {
+        res.lands.forEach(land => {
+          if (land.rides && land.rides.length > 0) {
+            const srMap = {};
+            const regular = [];
+            land.rides.forEach(r => {
+              const srMatch = r.name.match(/^(.+?)\s*[-–—]\s*Single Rider$/i);
+              if (srMatch) {
+                srMap[srMatch[1].trim()] = { wait: r.wait_time, is_open: r.is_open };
+              } else if (/single\s*rider/i.test(r.name)) {
+                const baseName = r.name.replace(/\s*[-–—]?\s*single\s*rider\s*/i, '').trim();
+                srMap[baseName] = { wait: r.wait_time, is_open: r.is_open };
+              } else {
+                regular.push({ ...r, park });
+              }
+            });
+            // Attach SR wait to parent ride
+            regular.forEach(r => {
+              const sr = srMap[r.name] || Object.entries(srMap).find(([k]) => r.name.startsWith(k))?.[1];
+              if (sr) { r.sr_wait = sr.wait; r.sr_open = sr.is_open; }
+            });
+            if (regular.length > 0) {
+              allRides[park].push({ land: land.name, rides: regular });
+            }
+          }
+        });
+      }
+    });
+
     liveWaits = {};
     let matchCount = 0;
     planData.schedule.forEach(item => {
@@ -142,6 +186,7 @@ async function fetchLiveWaits() {
     lastFetchTime = new Date();
     updateLiveWaitsStatus(matchCount, null);
     renderTimeline();
+    renderRides();
   } catch (err) {
     console.warn('Live wait times unavailable:', err);
     updateLiveWaitsStatus(0, err.message);
@@ -160,17 +205,37 @@ async function fetchLLSlots() {
       return;
     }
 
-    const re = /rides\/(\d+)\/reservation_slots[\s\S]*?↳\s*(Reservation slots available for (\d{2}:\d{2})|No reservation slots currently available)/g;
+    // Extract ride names from HTML
+    const rideNameMap = {};
+    [['dl', dlHtml], ['dca', dcaHtml]].forEach(([park, html]) => {
+      if (!html) return;
+      const nameRe = /\/rides\/(\d+)"[^>]*>([^<]+)</g;
+      let nm;
+      while ((nm = nameRe.exec(html)) !== null) {
+        rideNameMap[park + '-' + nm[1]] = nm[2].trim();
+      }
+    });
+
+    allRidesLL = {};
     let matchCount = 0;
 
-    [dlHtml, dcaHtml].forEach(html => {
+    [['dl', dlHtml], ['dca', dcaHtml]].forEach(([park, html]) => {
       if (!html) return;
+      const re = /rides\/(\d+)\/reservation_slots[\s\S]*?↳\s*(Reservation slots available for (\d{2}:\d{2})|No reservation slots currently available)/g;
       let m;
       while ((m = re.exec(html)) !== null) {
         const rideId = m[1];
+        const hasTime = !!m[3];
+        // Store ALL LL data
+        allRidesLL[park + '-' + rideId] = {
+          name: rideNameMap[park + '-' + rideId] || null,
+          time: hasTime ? m[3] : null,
+          soldOut: !hasTime,
+          park
+        };
+        // Existing plan-specific logic
         const schedId = LL_RIDE_IDS[rideId];
         if (!schedId) continue;
-        const hasTime = !!m[3];
         llSlots[schedId] = {
           time: hasTime ? m[3] : null,
           soldOut: !hasTime,
@@ -185,6 +250,7 @@ async function fetchLLSlots() {
     renderTimeline();
     renderChain();
     checkLLPlanAlignment();
+    renderRides();
   } catch (err) {
     console.warn('LL slot data unavailable:', err);
     updateLLSlotsStatus(0, err.message);
@@ -615,19 +681,284 @@ function renderMustDos() {
   el.innerHTML = html;
 }
 
-function renderTips() {
-  const el = document.getElementById('view-tips');
-  let html = '<div class="section-title">Contingencies</div>';
+// Personal ride scores (1-5): how much we think you'd enjoy each ride
+const RIDE_SCORES = {
+  // DCA - Cars Land
+  'Radiator Springs Racers': 5,
+  'Luigi\'s Rollickin\' Roadsters': 3,
+  'Mater\'s Junkyard Jamboree': 3,
+  // DCA - Avengers Campus
+  'Guardians of the Galaxy - Mission: BREAKOUT!': 5,
+  'WEB SLINGERS: A Spider-Man Adventure': 4,
+  // DCA - Pixar Pier
+  'Incredicoaster': 4,
+  'Inside Out Emotional Whirlwind': 2,
+  'Jessie\'s Critter Carousel': 1,
+  'Pixar Pal-A-Round - Swinging': 3,
+  'Pixar Pal-A-Round - Non-Swinging': 2,
+  'Toy Story Midway Mania!': 4,
+  // DCA - Grizzly Peak
+  'Grizzly River Run': 4,
+  'Soarin\' Around the World': 5,
+  'Soarin\' Over California': 5,
+  // DCA - Hollywood Land
+  'Monsters, Inc. Mike & Sulley to the Rescue!': 3,
+  'Animation Academy': 2,
+  'Turtle Talk with Crush': 2,
+  // DCA - Paradise Gardens
+  'The Little Mermaid ~ Ariel\'s Undersea Adventure': 2,
+  'Golden Zephyr': 2,
+  'Silly Symphony Swings': 3,
+  'Goofy\'s Sky School': 3,
+  'Jumping Jellyfish': 1,
+  // DCA - San Fransokyo
+  'San Fransokyo Square': 2,
+  // Disneyland - Adventureland
+  'Indiana Jones Adventure': 5,
+  'Jungle Cruise': 4,
+  // Disneyland - New Orleans Square
+  'Haunted Mansion': 5,
+  'Pirates of the Caribbean': 5,
+  // Disneyland - Critter Country
+  'Tiana\'s Bayou Adventure': 5,
+  'The Many Adventures of Winnie the Pooh': 2,
+  'Davy Crockett\'s Explorer Canoes': 2,
+  // Disneyland - Star Wars: Galaxy\'s Edge
+  'Star Wars: Rise of the Resistance': 5,
+  'Millennium Falcon: Smugglers Run': 4,
+  'Millennium Falcon: Smuggler\'s Run': 4,
+  // Disneyland - Frontierland
+  'Big Thunder Mountain Railroad': 5,
+  'Mark Twain Riverboat': 2,
+  'Sailing Ship Columbia': 2,
+  // Disneyland - Fantasyland
+  'Matterhorn Bobsleds': 4,
+  'Mr. Toad\'s Wild Ride': 4,
+  'Alice in Wonderland': 3,
+  'Peter Pan\'s Flight': 3,
+  'it\'s a small world': 2,
+  'Snow White\'s Enchanted Wish': 3,
+  'Pinocchio\'s Daring Journey': 2,
+  'Dumbo the Flying Elephant': 1,
+  'Casey Jr. Circus Train': 1,
+  'Storybook Land Canal Boats': 2,
+  'King Arthur Carrousel': 1,
+  'Mad Tea Party': 2,
+  // Disneyland - Tomorrowland
+  'Space Mountain': 5,
+  'Buzz Lightyear Astro Blasters': 3,
+  'Star Tours - The Adventures Continue': 4,
+  'Astro Orbitor': 1,
+  'Autopia': 2,
+  'Finding Nemo Submarine Voyage': 3,
+  // Disneyland - Mickey\'s Toontown
+  'Mickey & Minnie\'s Runaway Railway': 4,
+  'Roger Rabbit\'s Car Toon Spin': 3,
+  'Gadget\'s Go Coaster': 2,
+  'Chip \'n\' Dale\'s GADGETcoaster': 2,
+  // Non-ride attractions
+  'Walt Disney\'s Enchanted Tiki Room': 2,
+  'Disney Junior Dance Party!': 1,
+  'Fantasmic!': 4,
+  'Main Street Electrical Parade': 3,
+  'Wondrous Journeys': 3,
+  'The Disneyland Story presenting Great Moments with Mr. Lincoln': 1,
+  'Star Wars Launch Bay': 2,
+  'Sorcerer\'s Workshop': 1,
+  'Disney Princess Fantasy Faire': 1,
+};
 
+const NON_RIDES = new Set([
+  // DCA
+  'Animation Academy',
+  'Turtle Talk with Crush',
+  'Disney Junior Dance Party!',
+  'Sorcerer\'s Workshop',
+  // Disneyland
+  'Fantasmic!',
+  'Main Street Electrical Parade',
+  'Wondrous Journeys',
+  'Walt Disney\'s Enchanted Tiki Room',
+  'The Disneyland Story presenting Great Moments with Mr. Lincoln',
+  'Star Wars Launch Bay',
+  'Disney Princess Fantasy Faire',
+]);
+
+function isNonRide(name) {
+  if (NON_RIDES.has(name)) return true;
+  for (const nr of NON_RIDES) {
+    if (similarityScore(nr, name) >= 0.5) return true;
+  }
+  return false;
+}
+
+function getRideScore(rideName) {
+  if (RIDE_SCORES[rideName]) return RIDE_SCORES[rideName];
+  // Fuzzy match for slight name differences
+  for (const [key, score] of Object.entries(RIDE_SCORES)) {
+    if (similarityScore(key, rideName) >= 0.5) return score;
+  }
+  return null;
+}
+
+function isPlanRide(rideName) {
+  return planData.schedule.some(s => s.type === 'ride' && similarityScore(s.title, rideName) >= 0.5);
+}
+function isPlanRideDone(rideName) {
+  return planData.schedule.some(s => s.type === 'ride' && completed[s.id] && similarityScore(s.title, rideName) >= 0.5);
+}
+function isMustDoRide(rideName) {
+  return planData.mustDos.some(m => similarityScore(m.title, rideName) >= 0.5);
+}
+
+function toggleWishlist(key) {
+  rideWishlist[key] ? delete rideWishlist[key] : rideWishlist[key] = true;
+  saveWishlist();
+  renderRides();
+}
+
+function setRidesSort(mode) { ridesSortMode = ridesSortMode === mode ? 'default' : mode; renderRides(); }
+function setRidesFilter(f) { ridesFilter = ridesFilter === f ? 'all' : f; renderRides(); }
+
+function renderRides() {
+  ['dca', 'dl'].forEach(park => renderRidesPark(park));
+}
+
+function renderRidesPark(park) {
+  const el = document.getElementById('view-' + park);
+  if (!el) return;
+
+  const parkLabel = park === 'dca' ? '🏖️ California Adventure' : '🏰 Disneyland';
+  const hasData = allRides[park] && allRides[park].length > 0;
+
+  let html = '';
+
+  // Sort controls
+  html += '<div class="rides-sort-bar">';
+  html += `<button class="rides-sort-btn ${ridesFilter==='rides'?'active':''}" onclick="setRidesFilter('rides')">Rides</button>`;
+  html += `<button class="rides-sort-btn ${ridesFilter==='shows'?'active':''}" onclick="setRidesFilter('shows')">Shows</button>`;
+  html += '<div style="flex:1;"></div>';
+  html += `<button class="rides-sort-btn ${ridesSortMode==='score'?'active':''}" onclick="setRidesSort('score')">Score ↓</button>`;
+  html += `<button class="rides-sort-btn ${ridesSortMode==='wait'?'active':''}" onclick="setRidesSort('wait')">Wait ↑</button>`;
+  html += '</div>';
+
+  if (!hasData) {
+    html += '<div style="text-align:center;color:var(--text-dim);padding:40px 0;font-size:13px;">Waiting for ride data…<br><span style="font-size:11px;opacity:.6;">Data loads automatically from Queue-Times.com</span></div>';
+    el.innerHTML = html;
+    return;
+  }
+
+  html += `<div class="section-title" style="margin-top:4px;">${parkLabel}</div>`;
+
+  allRides[park].forEach(landGroup => {
+    html += `<div class="rides-land-header">${landGroup.land}</div>`;
+    let rides = [...landGroup.rides];
+    if (ridesSortMode === 'wait') {
+      rides.sort((a, b) => {
+        const aOpen = a.is_open ? 0 : 1;
+        const bOpen = b.is_open ? 0 : 1;
+        if (aOpen !== bOpen) return aOpen - bOpen;
+        return (a.wait_time || 0) - (b.wait_time || 0);
+      });
+    } else if (ridesSortMode === 'score') {
+      rides.sort((a, b) => (getRideScore(b.name) || 0) - (getRideScore(a.name) || 0));
+    } else {
+      rides.sort((a, b) => {
+        const scoreDiff = (getRideScore(b.name) || 0) - (getRideScore(a.name) || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+        const aOpen = a.is_open ? 0 : 1;
+        const bOpen = b.is_open ? 0 : 1;
+        if (aOpen !== bOpen) return aOpen - bOpen;
+        return (a.wait_time || 0) - (b.wait_time || 0);
+      });
+    }
+    rides.forEach(r => {
+      if (ridesFilter === 'rides' && isNonRide(r.name)) return;
+      if (ridesFilter === 'shows' && !isNonRide(r.name)) return;
+      html += renderRideRow(r, false);
+    });
+  });
+
+  // Wishlist count (show on each tab, filtered to that park)
+  const wlCount = Object.entries(rideWishlist).filter(([k]) => k.startsWith(park + '-')).length;
+  if (wlCount > 0) {
+    html += `<div class="rides-wishlist-count">${wlCount} ride${wlCount!==1?'s':''} wishlisted — included in export</div>`;
+  }
+
+  html += '<div class="attribution">Wait times powered by <a href="https://queue-times.com" target="_blank" rel="noopener">Queue-Times.com</a></div>';
+
+  el.innerHTML = html;
+}
+
+function renderRideRow(ride, isMustDoSection) {
+  const key = ride.park + '-' + ride.id;
+  const inPlan = isPlanRide(ride.name);
+  const wishlisted = !!rideWishlist[key] || inPlan;
+  const mustDo = isMustDoRide(ride.name);
+  const llData = findRideLL(ride);
+
+  const done = isPlanRideDone(ride.name);
+  let html = `<div class="ride-row${inPlan ? ' in-plan' : ''}${done ? ' ride-done' : ''}">`;
+
+  // Checkbox
+  html += `<button class="ride-check${wishlisted ? ' checked' : ''}" onclick="event.stopPropagation();toggleWishlist('${key}')">${wishlisted ? '✓' : ''}</button>`;
+
+  // Name + badges
+  html += '<div style="flex:1;min-width:0;">';
+  const score = getRideScore(ride.name);
+  const nonRide = isNonRide(ride.name);
+  html += `<div class="ride-name">${ride.name}`;
+  if (nonRide) html += ' <span class="ride-tag-show">Show</span>';
+  if (mustDo && !isMustDoSection) html += ' <span class="ride-mustdo">★</span>';
+  if (inPlan) html += ' <span class="ride-in-plan">In Plan</span>';
+  if (score) html += ` <span class="ride-score ride-score-${score}">${'●'.repeat(score)}${'○'.repeat(5-score)}</span>`;
+  html += '</div>';
+
+  // LL window on second line
+  if (llData) {
+    if (llData.soldOut) {
+      html += '<div class="ride-ll ride-ll-none">LL: Sold out</div>';
+    } else if (llData.time) {
+      html += `<div class="ride-ll">LL: ${formatLLTime(llData.time)}</div>`;
+    }
+  }
+  html += '</div>';
+
+  // Wait time + SR
+  html += '<div style="text-align:right;flex-shrink:0;">';
+  if (ride.is_open) {
+    html += `<div class="ride-wait"><span class="live-dot"></span>${ride.wait_time} min</div>`;
+  } else {
+    html += '<div class="ride-closed">CLOSED</div>';
+  }
+  if (ride.sr_wait != null) {
+    html += `<div class="ride-sr">${ride.sr_open ? `SR ${ride.sr_wait}m` : 'SR closed'}</div>`;
+  }
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+function findRideLL(ride) {
+  // Try exact id match first
+  const key = ride.park + '-' + ride.id;
+  if (allRidesLL[key]) return allRidesLL[key];
+  // No match
+  return null;
+}
+
+function renderTipsInSettings() {
+  const el = document.getElementById('tipsContent');
+  if (!el) return;
+  let html = '<div class="section-title" style="margin-top:0;">Contingencies</div>';
   planData.contingencies.forEach(c => {
     html += `<details><summary>${c.title}</summary><div class="tip-content">${c.body}</div></details>`;
   });
-
-  html += '<div class="section-title" style="margin-top:20px;">Pro Tips</div>';
+  html += '<div class="section-title" style="margin-top:16px;">Pro Tips</div>';
   planData.proTips.forEach(t => {
     html += `<details><summary>${t.split('.')[0]}</summary><div class="tip-content">${t}</div></details>`;
   });
-
   el.innerHTML = html;
 }
 
@@ -644,7 +975,7 @@ function render() {
   renderTimeline();
   renderChain();
   renderMustDos();
-  renderTips();
+  renderRides();
   updateProgress();
 }
 
@@ -657,6 +988,8 @@ function openSettings() {
   document.getElementById('resetMsg').innerHTML = '';
   document.getElementById('exportArea').style.display = 'none';
   document.getElementById('importArea').value = '';
+  // Render tips content
+  renderTipsInSettings();
   // Refresh live waits status display
   const matchCount = Object.keys(liveWaits).length;
   if (lastFetchTime) {
@@ -722,7 +1055,8 @@ function buildFullExportJSON(includeLive) {
       'mustDos[]': '{ id: string (matches schedule id), title: string, park: string, method: string }',
       'contingencies[]': '{ title: string, body: string }',
       'proTips[]': 'string',
-      'llReturnWindows': '{ _note: string, fetchedAt: ISO string, rides: { [schedId]: { name: string, earliestWindow: string|null, soldOut: bool } } }'
+      'llReturnWindows': '{ _note: string, fetchedAt: ISO string, rides: { [schedId]: { name: string, earliestWindow: string|null, soldOut: bool } } }',
+      'wishlistRides': '{ rides: { [parkDashId]: { name, park, land, waitMinutes, isOpen, llWindow, llSoldOut } } }'
     },
     plan: JSON.parse(JSON.stringify(planData)),
     completed: { ...completed },
@@ -771,6 +1105,37 @@ function buildFullExportJSON(includeLive) {
     }
   }
 
+  // Include wishlisted rides
+  if (Object.keys(rideWishlist).length > 0) {
+    exportData.wishlistRides = {
+      _note: 'Rides the user is interested in but not currently in the plan. Include wait and LL data so Claude can advise on whether/when to add them.',
+      rides: {}
+    };
+    // Flatten allRides for lookup
+    const rideIndex = {};
+    ['dca','dl'].forEach(park => {
+      if (!allRides[park]) return;
+      allRides[park].forEach(landGroup => {
+        landGroup.rides.forEach(r => {
+          rideIndex[park + '-' + r.id] = { ...r, land: landGroup.land };
+        });
+      });
+    });
+    for (const key in rideWishlist) {
+      const r = rideIndex[key];
+      const ll = allRidesLL[key];
+      exportData.wishlistRides.rides[key] = {
+        name: r ? r.name : key,
+        park: r ? r.park : key.split('-')[0],
+        land: r ? r.land : null,
+        waitMinutes: r ? r.wait_time : null,
+        isOpen: r ? r.is_open : null,
+        llWindow: ll && ll.time ? formatLLTime(ll.time) : null,
+        llSoldOut: ll ? ll.soldOut : null
+      };
+    }
+  }
+
   return JSON.stringify(exportData, null, 2);
 }
 
@@ -778,14 +1143,34 @@ function exportPlan() {
   const includeLive = document.getElementById('exportLiveWaits').checked;
   const json = buildFullExportJSON(includeLive);
 
+  // Build prompt wrapper
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+  const rides = planData.schedule.filter(s => s.type === 'ride');
+  const doneCount = rides.filter(r => completed[r.id]).length;
+
+  let prompt = `[Disneyland Navigator \u2014 Plan Update]\n\n`;
+  prompt += `\u{1F550} ${timeStr} \u00B7 ${doneCount}/${rides.length} rides done\n\n`;
+
+  if (Object.keys(rideWishlist).length > 0) {
+    prompt += `The wishlisted rides in the data are ones I want to do \u2014 work them into the plan if possible.\n\n`;
+  }
+
+  prompt += `Based on the current data (live wait times, LL return windows, completed rides, and wishlisted rides), give me the best updated plan for the rest of the day. Optimize for:\n`;
+  prompt += `- Minimizing wait times by hitting low-wait rides first\n`;
+  prompt += `- Using LL windows effectively\n`;
+  prompt += `- Fitting in wishlisted rides where they make sense\n`;
+  prompt += `- Keeping a good pace without burnout\n\n`;
+  prompt += json;
+
   // Show in textarea as fallback
   const area = document.getElementById('exportArea');
-  area.value = json;
+  area.value = prompt;
   area.style.display = 'block';
 
   // Try clipboard
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(json).then(() => {
+    navigator.clipboard.writeText(prompt).then(() => {
       showMsg('exportMsg', 'Copied to clipboard!', 'success');
     }).catch(() => {
       showMsg('exportMsg', 'Clipboard failed \u2014 copy from the text box below.', 'error');
@@ -1000,7 +1385,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 render();
 fetchLiveWaits();
 // Update current activity every 60s
-setInterval(() => { renderTimeline(); }, 60000);
+setInterval(() => { renderTimeline(); renderRides(); }, 60000);
 // Refresh live wait times every 5 min
 setInterval(fetchLiveWaits, 300000);
 // Fetch LL return windows 2s after page load, then every 10 min

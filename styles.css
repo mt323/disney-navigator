@@ -495,6 +495,71 @@ details[open] summary::before { transform:rotate(90deg); }
   color:#40c870; background:rgba(64,200,112,0.06); border:1px solid rgba(64,200,112,0.1);
 }
 
+/* Rides tab */
+.rides-sort-bar { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.rides-sort-btn {
+  font-size:11px; padding:5px 10px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text-dim); cursor:pointer; transition:all .2s;
+}
+.rides-sort-btn.active { background:rgba(240,192,64,0.12); color:var(--gold); border-color:rgba(240,192,64,0.3); }
+.rides-park-toggle {
+  font-size:11px; padding:5px 10px; border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text-dim); cursor:pointer; transition:all .2s;
+}
+.rides-park-toggle.active { color:#fff; border-color:rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); }
+.rides-park-toggle.dca.active { color:var(--dca); border-color:rgba(224,85,48,0.3); background:rgba(224,85,48,0.12); }
+.rides-park-toggle.dl.active { color:var(--dl); border-color:rgba(51,102,204,0.3); background:rgba(51,102,204,0.12); }
+
+.rides-park-header {
+  padding:10px 14px; border-radius:10px; margin:12px 0 8px;
+  font-family:'Fredoka','DM Sans',sans-serif; font-weight:600; font-size:13px;
+}
+.rides-park-header.dca {
+  background: linear-gradient(135deg, #2a1510 0%, #3a1a18 100%);
+  color:var(--dca); border:1px solid rgba(224,85,48,0.2);
+}
+.rides-park-header.dl {
+  background: linear-gradient(135deg, #101a2e 0%, #0a1528 100%);
+  color:var(--dl); border:1px solid rgba(51,102,204,0.2);
+}
+.rides-land-header {
+  font-size:12px; font-weight:600; color:var(--text-dim); padding:8px 0 4px;
+  border-bottom:1px solid var(--border); margin-bottom:6px;
+}
+
+.ride-row {
+  display:flex; align-items:center; gap:8px; padding:10px 12px;
+  background:var(--bg-card); border-radius:10px; margin-bottom:4px;
+  border:1px solid var(--border); transition:opacity .2s;
+}
+.ride-row.in-plan { border-left:3px solid var(--accent); }
+.ride-row.ride-done { opacity: 0.4; }
+.ride-check {
+  width:22px; height:22px; border-radius:6px; border:2px solid #444460;
+  background:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .2s; color:transparent; font-size:11px; flex-shrink:0;
+}
+.ride-check.checked { border-color:var(--gold); background:rgba(240,192,64,0.15); color:var(--gold); }
+.ride-name { font-size:13px; font-weight:500; }
+.ride-mustdo { color:var(--gold); font-size:10px; margin-left:2px; }
+.ride-in-plan { font-size:9px; color:var(--accent); background:rgba(96,128,255,0.1); padding:2px 6px; border-radius:4px; }
+.ride-tag-show { font-size:9px; color:var(--text-dim); background:rgba(255,255,255,0.06); padding:1px 5px; border-radius:4px; font-weight:500; }
+.ride-score { font-size:8px; margin-left:4px; letter-spacing:-1px; opacity:0.7; }
+.ride-score-5 { color:var(--gold); opacity:1; }
+.ride-score-4 { color:#40c870; }
+.ride-score-3 { color:var(--text-dim); }
+.ride-score-2 { color:var(--text-dim); opacity:0.5; }
+.ride-score-1 { color:var(--text-dim); opacity:0.4; }
+.ride-wait { font-size:11px; color:var(--gold); font-weight:600; white-space:nowrap; }
+.ride-closed { font-size:11px; color:#e05050; font-weight:600; }
+.ride-sr { font-size:10px; color:var(--text-dim); opacity:0.7; }
+.ride-ll { font-size:10px; color:#40c870; white-space:nowrap; }
+.ride-ll-none { color:#e05050; opacity:0.7; }
+
+.rides-wishlist-count {
+  font-size:11px; color:var(--text-dim); text-align:center; padding:8px 0; margin-top:8px;
+}
+
 /* Action Sheet */
 .action-overlay {
   position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.5);
