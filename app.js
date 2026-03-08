@@ -1158,7 +1158,7 @@ function importPlan() {
     const updatedParts = [];
     if (newPlan.meta) { planData.meta = { ...planData.meta, ...newPlan.meta }; updatedParts.push('meta'); }
     if (newPlan.schedule) {
-      // Re-inject completed rides that Claude may have dropped
+      // Re-inject completed activities that Claude may have dropped
       const partialNewIds = new Set(newPlan.schedule.map(s => s.id));
       const partialMissing = planData.schedule.filter(s => completed[s.id] && !partialNewIds.has(s.id));
       if (partialMissing.length > 0) {
@@ -1213,28 +1213,27 @@ function importPlan() {
     if (!Array.isArray(newPlan.contingencies)) newPlan.contingencies = [];
     if (!Array.isArray(newPlan.proTips)) newPlan.proTips = [];
 
-    // Merge completion state: keep completed IDs that exist in new plan, drop orphans
+    // Re-inject completed activities that Claude may have dropped
+    const oldCompleted = { ...completed };
+    const oldSchedule = planData.schedule;
+    const newSchedIds = new Set(newPlan.schedule.map(s => s.id));
+    const missingCompleted = oldSchedule.filter(s => oldCompleted[s.id] && !newSchedIds.has(s.id));
+    if (missingCompleted.length > 0) {
+      newPlan.schedule = [...missingCompleted, ...newPlan.schedule];
+    }
+
+    // Merge completion state: keep completed IDs that exist in new plan (including re-injected ones)
     const newIds = new Set();
     newPlan.schedule.forEach(s => newIds.add(s.id));
     newPlan.mustDos.forEach(m => newIds.add(m.id));
     newPlan.llChain.forEach(l => { if (l.rideId) newIds.add(l.rideId); });
 
     const newCompleted = {};
-    for (const id in completed) {
+    for (const id in oldCompleted) {
       if (newIds.has(id)) newCompleted[id] = true;
     }
     completed = newCompleted;
     save();
-
-    // Re-inject completed rides that Claude may have dropped
-    const oldSchedule = planData.schedule;
-    const newSchedIds = new Set(newPlan.schedule.map(s => s.id));
-    const missingCompleted = oldSchedule.filter(s => completed[s.id] && !newSchedIds.has(s.id));
-    if (missingCompleted.length > 0) {
-      newPlan.schedule = [...missingCompleted, ...newPlan.schedule];
-      // Also restore their completed state (they were removed from newCompleted above)
-      missingCompleted.forEach(s => { completed[s.id] = true; });
-    }
 
     // Save plan to localStorage
     planData = newPlan;
