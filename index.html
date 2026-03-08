@@ -51,6 +51,9 @@
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:10px;cursor:pointer;">
       <input type="checkbox" id="exportLiveWaits" checked> Include live wait times
     </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="exportLLSlots" checked> Include LL return windows
+    </label>
     <div class="settings-btns">
       <button class="settings-btn btn-primary" onclick="exportPlan()">Copy to Clipboard</button>
     </div>
@@ -71,6 +74,17 @@
   <div class="settings-section">
     <h3>Live Wait Times</h3>
     <p id="liveWaitsStatus">Checking...</p>
+    <div class="settings-btns" style="margin-top:8px;">
+      <button class="settings-btn btn-primary" onclick="fetchLiveWaits()" style="font-size:12px;padding:8px 14px;">Refresh Now</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>LL Return Windows</h3>
+    <p id="llSlotsStatus">Checking...</p>
+    <div class="settings-btns" style="margin-top:8px;">
+      <button class="settings-btn btn-primary" onclick="fetchLLSlots()" style="font-size:12px;padding:8px 14px;">Refresh Now</button>
+    </div>
   </div>
 
   <div class="settings-section">

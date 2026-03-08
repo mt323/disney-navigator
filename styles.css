@@ -466,6 +466,35 @@ details[open] summary::before { transform:rotate(90deg); }
 .attribution { font-size:10px; color:var(--text-dim); text-align:center; padding:8px 0; margin-top:16px; opacity:0.6; }
 .attribution a { color:var(--text-dim); text-decoration:underline; }
 
+/* LL Return Windows */
+.card-ll-slot { margin-top:4px; font-size:11px; color:#40c870; display:flex; align-items:center; gap:3px; }
+.card-ll-slot-none { color:#e05050; opacity:0.7; }
+.ll-slot-dot {
+  display:inline-block; width:6px; height:6px; border-radius:50%; background:#40c870; margin-right:2px; vertical-align:middle;
+}
+.ll-slot-dot.stale { background: var(--gold); }
+.ll-slot-dot.sold-out { background: #e05050; }
+.chain-ll-slot {
+  font-size:11px; color:#40c870; margin-top:4px; padding:4px 10px;
+  background:rgba(64,200,112,0.08); border:1px solid rgba(64,200,112,0.15);
+  border-radius:8px; display:inline-block;
+}
+.chain-ll-sold-out {
+  font-size:11px; color:#e05050; margin-top:4px; padding:4px 10px;
+  background:rgba(224,80,80,0.08); border:1px solid rgba(224,80,80,0.15);
+  border-radius:8px; display:inline-block;
+}
+.chain-alert {
+  font-size:11px; margin-top:4px; padding:4px 10px;
+  border-radius:8px; display:inline-block;
+}
+.chain-alert-warning {
+  color:var(--gold); background:rgba(240,192,64,0.08); border:1px solid rgba(240,192,64,0.15);
+}
+.chain-alert-ahead {
+  color:#40c870; background:rgba(64,200,112,0.06); border:1px solid rgba(64,200,112,0.1);
+}
+
 /* Action Sheet */
 .action-overlay {
   position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.5);

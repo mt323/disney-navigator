@@ -50,8 +50,24 @@ async function fetchWithCorsRetry(url) {
   }
   return null;
 }
+
+async function fetchWithCorsRetryHTML(url) {
+  try {
+    const r = await fetch(url);
+    if (r.ok) return r.text();
+  } catch(e) {}
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const r = await fetch(proxy(url));
+      if (r.ok) return r.text();
+    } catch(e) {}
+  }
+  return null;
+}
 let liveWaits = {};
 let lastFetchTime = null;
+let llSlots = {};        // { scheduleId: { time: "16:25" | null, soldOut: bool, fetchedAt: Date } }
+let lastLLFetchTime = null;
 
 function normalizeRideName(name) {
   return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
@@ -130,6 +146,102 @@ async function fetchLiveWaits() {
     console.warn('Live wait times unavailable:', err);
     updateLiveWaitsStatus(0, err.message);
   }
+}
+
+async function fetchLLSlots() {
+  try {
+    const [dlHtml, dcaHtml] = await Promise.all([
+      fetchWithCorsRetryHTML(LL_SLOTS_BASE.dl),
+      fetchWithCorsRetryHTML(LL_SLOTS_BASE.dca)
+    ]);
+
+    if (!dlHtml && !dcaHtml) {
+      updateLLSlotsStatus(0, 'Could not reach Queue-Times');
+      return;
+    }
+
+    const re = /rides\/(\d+)\/reservation_slots[\s\S]*?↳\s*(Reservation slots available for (\d{2}:\d{2})|No reservation slots currently available)/g;
+    let matchCount = 0;
+
+    [dlHtml, dcaHtml].forEach(html => {
+      if (!html) return;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        const rideId = m[1];
+        const schedId = LL_RIDE_IDS[rideId];
+        if (!schedId) continue;
+        const hasTime = !!m[3];
+        llSlots[schedId] = {
+          time: hasTime ? m[3] : null,
+          soldOut: !hasTime,
+          fetchedAt: new Date()
+        };
+        matchCount++;
+      }
+    });
+
+    lastLLFetchTime = new Date();
+    updateLLSlotsStatus(matchCount, null);
+    renderTimeline();
+    renderChain();
+    checkLLPlanAlignment();
+  } catch (err) {
+    console.warn('LL slot data unavailable:', err);
+    updateLLSlotsStatus(0, err.message);
+  }
+}
+
+function updateLLSlotsStatus(matchCount, error) {
+  const el = document.getElementById('llSlotsStatus');
+  if (!el) return;
+  if (error) {
+    el.textContent = 'Unavailable: ' + error;
+    el.style.color = '#e05050';
+  } else if (matchCount > 0) {
+    const ago = lastLLFetchTime ? Math.round((Date.now() - lastLLFetchTime.getTime()) / 60000) : 0;
+    el.textContent = `${matchCount}/9 rides · updated ${ago < 1 ? 'just now' : ago + ' min ago'}`;
+    el.style.color = '#40c870';
+  } else {
+    el.textContent = 'No LL slot data found.';
+    el.style.color = 'var(--text-dim)';
+  }
+}
+
+function formatLLTime(time24) {
+  if (!time24) return null;
+  const [h, m] = time24.split(':').map(Number);
+  const suffix = h >= 12 ? 'pm' : 'am';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, '0')}${suffix}`;
+}
+
+function checkLLPlanAlignment() {
+  const chain = planData.llChain;
+  if (!chain) return;
+
+  chain.forEach(step => {
+    const slot = llSlots[step.rideId];
+    if (!slot || slot.soldOut || !slot.time) {
+      step._llAlert = null;
+      return;
+    }
+
+    const schedItem = planData.schedule.find(s => s.id === step.rideId);
+    if (!schedItem) { step._llAlert = null; return; }
+
+    const [slotH, slotM] = slot.time.split(':').map(Number);
+    const slotMinutes = slotH * 60 + slotM;
+    const plannedMinutes = schedItem.m;
+    const diff = slotMinutes - plannedMinutes;
+
+    if (diff > 30) {
+      step._llAlert = { type: 'warning', text: `LL window is ${formatLLTime(slot.time)} but plan says ${schedItem.time} — ${Math.round(diff / 60)}hr ${diff % 60}min delay` };
+    } else if (diff < -10) {
+      step._llAlert = { type: 'ahead', text: `Window available at ${formatLLTime(slot.time)}, ahead of ${schedItem.time} plan` };
+    } else {
+      step._llAlert = null;
+    }
+  });
 }
 
 function updateLiveWaitsStatus(matchCount, error) {
@@ -412,6 +524,19 @@ function renderTimeline() {
         html += `<div class="card-details"><span class="card-wait">\u23F1 ~${item.wait} min wait</span></div>`;
       }
     }
+    // LL return window display
+    if (isRide && item.method === 'll') {
+      const slot = llSlots[item.id];
+      if (slot) {
+        const staleClass = slot.fetchedAt && (Date.now() - slot.fetchedAt.getTime() > 1200000) ? ' stale' : '';
+        if (slot.soldOut) {
+          html += `<div class="card-ll-slot card-ll-slot-none"><span class="ll-slot-dot sold-out"></span>LL: Sold out</div>`;
+        } else if (slot.time) {
+          html += `<div class="card-ll-slot"><span class="ll-slot-dot${staleClass}"></span>LL window: ${formatLLTime(slot.time)}</div>`;
+        }
+      }
+    }
+
     if (item.wait != null && item.type === 'meal') {
       html += `<div class="card-details"><span class="card-wait">\uD83C\uDF7D ~${item.wait} min</span></div>`;
     }
@@ -449,6 +574,22 @@ function renderChain() {
     html += `<div class="chain-park ${step.park}">${step.park==='dca'?'California Adventure':'Disneyland'}</div>`;
     if (step.note) html += `<div class="chain-note">${step.note}</div>`;
     if (i === 2) html += '<div class="chain-note">\u23F0 2-hour rule may apply after this step</div>';
+
+    // LL slot pill
+    const slot = llSlots[step.rideId];
+    if (slot) {
+      if (slot.soldOut) {
+        html += '<div class="chain-ll-sold-out">Sold out</div>';
+      } else if (slot.time) {
+        html += `<div class="chain-ll-slot">Next window: ${formatLLTime(slot.time)}</div>`;
+      }
+    }
+    // Plan alignment alert
+    if (step._llAlert) {
+      const alertClass = step._llAlert.type === 'warning' ? 'chain-alert chain-alert-warning' : 'chain-alert chain-alert-ahead';
+      html += `<div class="${alertClass}">${step._llAlert.text}</div>`;
+    }
+
     html += '</div></div>';
   });
 
@@ -531,6 +672,23 @@ function openSettings() {
     liveCheckbox.disabled = false;
     liveCheckbox.parentElement.style.opacity = '1';
   }
+  // Enable/disable LL slots export checkbox
+  const llCheckbox = document.getElementById('exportLLSlots');
+  const llCount = Object.keys(llSlots).length;
+  if (llCheckbox) {
+    if (llCount === 0) {
+      llCheckbox.checked = false;
+      llCheckbox.disabled = true;
+      llCheckbox.parentElement.style.opacity = '0.4';
+    } else {
+      llCheckbox.disabled = false;
+      llCheckbox.parentElement.style.opacity = '1';
+    }
+  }
+  // Refresh LL slots status
+  if (lastLLFetchTime) {
+    updateLLSlotsStatus(llCount, null);
+  }
 }
 
 function closeSettings() {
@@ -563,7 +721,8 @@ function buildFullExportJSON(includeLive) {
       'llChain[]': '{ num: number, trigger: string, ride: string, park: "dca"|"dl", rideId: string (matches schedule id), note?: string }',
       'mustDos[]': '{ id: string (matches schedule id), title: string, park: string, method: string }',
       'contingencies[]': '{ title: string, body: string }',
-      'proTips[]': 'string'
+      'proTips[]': 'string',
+      'llReturnWindows': '{ _note: string, fetchedAt: ISO string, rides: { [schedId]: { name: string, earliestWindow: string|null, soldOut: bool } } }'
     },
     plan: JSON.parse(JSON.stringify(planData)),
     completed: { ...completed },
@@ -588,6 +747,26 @@ function buildFullExportJSON(includeLive) {
         plannedWait: item ? item.wait : null,
         isOpen: lw.is_open,
         apiName: lw.api_name
+      };
+    }
+  }
+
+  // Include LL return windows if requested
+  const includeLL = typeof document !== 'undefined' && document.getElementById('exportLLSlots')
+    ? document.getElementById('exportLLSlots').checked : true;
+  if (includeLL && Object.keys(llSlots).length > 0) {
+    exportData.llReturnWindows = {
+      _note: 'Earliest available LL return windows from Queue-Times.com',
+      fetchedAt: lastLLFetchTime ? lastLLFetchTime.toISOString() : null,
+      rides: {}
+    };
+    for (const id in llSlots) {
+      const sl = llSlots[id];
+      const item = planData.schedule.find(s => s.id === id);
+      exportData.llReturnWindows.rides[id] = {
+        name: item ? item.title : id,
+        earliestWindow: sl.time ? formatLLTime(sl.time) : null,
+        soldOut: sl.soldOut
       };
     }
   }
@@ -712,6 +891,7 @@ function importPlan() {
     localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(planData));
     render();
     fetchLiveWaits();
+    fetchLLSlots();
     showMsg('importMsg', 'Partial update applied: ' + updatedParts.join(', '), 'success');
 
   } else {
@@ -776,6 +956,7 @@ function importPlan() {
 
     render();
     fetchLiveWaits();
+    fetchLLSlots();
     showMsg('importMsg', 'Plan imported successfully!', 'success');
   }
 }
@@ -822,3 +1003,6 @@ fetchLiveWaits();
 setInterval(() => { renderTimeline(); }, 60000);
 // Refresh live wait times every 5 min
 setInterval(fetchLiveWaits, 300000);
+// Fetch LL return windows 2s after page load, then every 10 min
+setTimeout(fetchLLSlots, 2000);
+setInterval(fetchLLSlots, 600000);

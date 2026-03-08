@@ -10,6 +10,22 @@ const QUEUE_TIMES_BASE = {
   dl: 'https://queue-times.com/parks/16/queue_times.json',
   dca: 'https://queue-times.com/parks/17/queue_times.json'
 };
+const LL_SLOTS_BASE = {
+  dl: 'https://queue-times.com/en-US/parks/16/queue_times',
+  dca: 'https://queue-times.com/en-US/parks/17/queue_times'
+};
+
+const LL_RIDE_IDS = {
+  329: 'guardians',
+  322: 'incredicoaster',
+  312: 'soarin',
+  14168: 'tianas',
+  13958: 'haunted-mansion',
+  323: 'big-thunder',
+  284: 'space-mountain',
+  279: 'matterhorn',
+  273: 'buzz',
+};
 
 // ── Default Plan Data ─────────────────────────────────
 const DEFAULT_PLAN = {
