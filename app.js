@@ -387,7 +387,10 @@ function renderTimeline() {
     html += `<div class="card-top">`;
     html += `<span class="card-time">${item.time}</span>`;
     html += `<span class="card-title">${item.title}</span>`;
-    if (item.method === 'll') html += '<span class="badge badge-ll">LL</span>';
+    if (item.method === 'll') {
+      html += '<span class="badge badge-ll">LL</span>';
+      if (item.hasSr) html += '<span class="badge badge-sr">SR</span>';
+    }
     if (item.method === 'sr') html += '<span class="badge badge-sr">SR</span>';
     if (item.method === 'standby') html += '<span class="badge badge-standby">Standby</span>';
     if (isNow) html += '<span class="badge badge-now">NOW</span>';
@@ -555,7 +558,7 @@ function buildFullExportJSON(includeLive) {
     ].join(' '),
     _schema: {
       'meta': '{ title: string, date: string, cost: string }',
-      'schedule[]': '{ id: string, time: string (e.g. "2:00"), m: number (minutes since midnight), title: string, park: "dca"|"dl", type: "ride"|"walk"|"meal"|"action", method: "ll"|"sr"|"standby"|null, wait: number|null (minutes), isMustDo: bool, llNote: string|null }',
+      'schedule[]': '{ id: string, time: string (e.g. "2:00"), m: number (minutes since midnight), title: string, park: "dca"|"dl", type: "ride"|"walk"|"meal"|"action", method: "ll"|"sr"|"standby"|null, wait: number|null (minutes), isMustDo: bool, llNote: string|null, hasSr: bool|null (true if LL ride also has Single Rider) }',
       'scheduleUpdates[]': '{ id: string (required, matches existing schedule id), ...any schedule fields to overwrite }',
       'llChain[]': '{ num: number, trigger: string, ride: string, park: "dca"|"dl", rideId: string (matches schedule id), note?: string }',
       'mustDos[]': '{ id: string (matches schedule id), title: string, park: string, method: string }',
