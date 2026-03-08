@@ -326,173 +326,68 @@ function updateLiveWaitsStatus(matchCount, error) {
   }
 }
 
-// ── Quick Actions ─────────────────────────────────────
-let activeCardId = null;
-
-function openActions(id) {
-  const item = planData.schedule.find(s => s.id === id);
-  if (!item || item.type === 'walk') return;
-  activeCardId = id;
-
-  const isDone = !!completed[id];
-  const isRide = item.type === 'ride';
-  const live = liveWaits[id];
-  const liveStr = live && live.is_open ? `${live.wait_time} min live` : (live && !live.is_open ? 'CLOSED' : '');
-
-  let html = `<div class="action-sheet-title">${item.title}</div>`;
-  let subParts = [item.time];
-  if (item.method) subParts.push(item.method.toUpperCase());
-  if (liveStr) subParts.push(liveStr);
-  html += `<div class="action-sheet-sub">${subParts.join(' \u00b7 ')}</div>`;
-
-  if (isRide && !isDone) {
-    html += btn('\uD83D\uDEAB', 'Ride is down', 'down');
-    html += btn('\u23F1', 'Wait too long', 'wait-long');
-    if (item.method === 'll') html += btn('\u26A1', 'Missed LL window', 'missed-ll');
-    if (item.method === 'll') {
-      html += `<div class="action-custom-wrap" id="llTimesWrap" style="display:none;">
-        <input type="text" id="llTimesInput" placeholder="e.g. Guardians 1:30, Incred 2:15" />
-        <button onclick="sendAction('ll-times')">Copy</button>
-      </div>`;
-      html += btn('\uD83C\uDF9F', 'LL times available', 'show-ll-times');
-    }
-    html += btn('\u23ED', 'Skip this', 'skip');
-  }
-  if (isRide && isDone) {
-    html += btn('\uD83D\uDD04', 'Ride again', 'ride-again');
-  }
-
-  // Universal (non-walk)
-  html += btn('\uD83D\uDD50', 'Running behind', 'behind');
-  html += btn('\uD83C\uDFC3', 'Ahead of schedule', 'ahead');
-  html += btn('\uD83C\uDF7D', 'Need a break', 'break');
-  html += `<div class="action-custom-wrap" id="customNoteWrap" style="display:none;">
-    <input type="text" id="customNoteInput" placeholder="Type a note\u2026" />
-    <button onclick="sendAction('custom')">Copy</button>
-  </div>`;
-  html += btn('\uD83D\uDCDD', 'Custom note', 'show-custom');
-
-  document.getElementById('actionSheetBody').innerHTML = html;
-  document.getElementById('actionOverlay').classList.add('open');
-}
-
-function btn(icon, label, type) {
-  let onclick;
-  if (type === 'show-custom') {
-    onclick = `document.getElementById('customNoteWrap').style.display='flex';document.getElementById('customNoteInput').focus();`;
-  } else if (type === 'show-ll-times') {
-    onclick = `document.getElementById('llTimesWrap').style.display='flex';document.getElementById('llTimesInput').focus();`;
-  } else {
-    onclick = `sendAction('${type}')`;
-  }
-  return `<button class="action-btn" onclick="${onclick}"><span class="action-btn-icon">${icon}</span>${label}</button>`;
-}
-
-function closeActions() {
-  document.getElementById('actionOverlay').classList.remove('open');
-  activeCardId = null;
-}
-
-function generateCompactContext() {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
-  const rides = planData.schedule.filter(s => s.type === 'ride');
-  const doneCount = rides.filter(r => completed[r.id]).length;
-
-  let lines = [];
-  lines.push(`\uD83D\uDCCD ${timeStr} \u00b7 ${doneCount}/${rides.length} rides done`);
-
-  const item = planData.schedule.find(s => s.id === activeCardId);
-  if (item) {
-    let pin = `\uD83D\uDCCC ${item.title}`;
-    if (item.method) pin += ` (${item.method.toUpperCase()})`;
-    const live = liveWaits[item.id];
-    if (live && live.is_open) pin += ` \u00b7 live: ${live.wait_time} min`;
-    else if (live && !live.is_open) pin += ' \u00b7 CLOSED';
-    lines.push(pin);
-  }
-
-  return { header: lines.join('\n'), item };
-}
-
-function sendAction(type) {
-  const { header, item } = generateCompactContext();
-  if (!item) return;
-
-  let issue = '';
-  let ask = '';
-  const live = liveWaits[item.id];
-  const liveMin = live && live.is_open ? live.wait_time : null;
-
-  switch (type) {
-    case 'down':
-      issue = `\u26A0\uFE0F ${item.title} is closed/down`;
-      ask = 'What should I do instead?';
-      break;
-    case 'wait-long':
-      issue = `\u26A0\uFE0F Wait for ${item.title} is too long` + (liveMin ? ` (${liveMin} min live)` : '');
-      ask = 'Should I skip it, come back later, or switch strategy?';
-      break;
-    case 'missed-ll':
-      issue = `\u26A0\uFE0F Missed my LL window for ${item.title}`;
-      ask = 'How should I adjust the LL chain?';
-      break;
-    case 'skip':
-      issue = `\u23ED ${item.title}`;
-      ask = 'What should I do with the freed time?';
-      break;
-    case 'ride-again':
-      issue = `\uD83D\uDD04 Want to ride ${item.title} again`;
-      ask = 'Can you fit it in?';
-      break;
-    case 'behind':
-      issue = `\uD83D\uDD50 Running behind schedule at ${item.title}`;
-      ask = 'What should I cut or rearrange?';
-      break;
-    case 'ahead':
-      issue = `\uD83C\uDFC3 Finished ${item.title} early`;
-      ask = 'What should I add or do next?';
-      break;
-    case 'break':
-      issue = `\uD83C\uDF7D Need food/rest near ${item.title}`;
-      ask = 'Where should I go and how to adjust the plan?';
-      break;
-    case 'll-times': {
-      const text = document.getElementById('llTimesInput').value.trim();
-      if (!text) return;
-      issue = `\uD83C\uDF9F LL times I can see: ${text}`;
-      ask = 'Based on these available windows, should I adjust the LL chain order or timing?';
-      break;
-    }
-    case 'custom': {
-      const text = document.getElementById('customNoteInput').value.trim();
-      if (!text) return;
-      issue = `\uD83D\uDCDD Note about ${item.title}: ${text}`;
-      ask = 'How should I adjust?';
-      break;
-    }
-  }
-
-  const fullExport = buildFullExportJSON();
-  const msg = `[Disneyland Navigator \u2014 Quick Update]\n\n${header}\n\n${issue}\n\n${ask}\n\n${fullExport}`;
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(msg).then(() => {
-      showToast('Copied to clipboard!');
-      closeActions();
-    }).catch(() => {
-      showToast('Clipboard failed');
-    });
-  } else {
-    showToast('Clipboard not available');
-  }
-}
-
+// ── Toast ─────────────────────────────────────────────
 function showToast(text) {
   const el = document.getElementById('toast');
   el.textContent = text;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── Secured LL Windows ───────────────────────────────
+let securedLL = {};
+const SECURED_LL_KEY = 'disney-secured-ll';
+try { securedLL = JSON.parse(localStorage.getItem(SECURED_LL_KEY)) || {}; } catch(e) {}
+function saveSecuredLL() { localStorage.setItem(SECURED_LL_KEY, JSON.stringify(securedLL)); }
+
+function openLLEntry(id) {
+  const item = planData.schedule.find(s => s.id === id);
+  if (!item) return;
+  const existing = securedLL[id] || '';
+
+  let html = `<div class="ll-input-sheet-title">${item.title}</div>`;
+  html += `<div class="ll-input-sheet-sub">Enter your secured LL return window</div>`;
+  html += `<input type="time" id="llTimeInput" class="ll-time-input" value="${existing}">`;
+  html += `<div class="ll-input-btns">`;
+  html += `<button class="ll-input-btn ll-input-save" onclick="saveLLEntry('${id}')">Save</button>`;
+  if (existing) {
+    html += `<button class="ll-input-btn ll-input-clear" onclick="clearLLEntry('${id}')">Clear</button>`;
+  }
+  html += `<button class="ll-input-btn ll-input-cancel" onclick="closeLLEntry()">Cancel</button>`;
+  html += `</div>`;
+
+  document.getElementById('llInputBody').innerHTML = html;
+  document.getElementById('llInputOverlay').classList.add('open');
+}
+
+function saveLLEntry(id) {
+  const val = document.getElementById('llTimeInput').value;
+  if (!val) { showToast('Enter a time'); return; }
+  securedLL[id] = val;
+  saveSecuredLL();
+  closeLLEntry();
+  render();
+  showToast('Saved!');
+}
+
+function clearLLEntry(id) {
+  delete securedLL[id];
+  saveSecuredLL();
+  closeLLEntry();
+  render();
+  showToast('Cleared');
+}
+
+function closeLLEntry() {
+  document.getElementById('llInputOverlay').classList.remove('open');
+}
+
+function formatSecuredTime(timeStr) {
+  // Convert "14:30" → "2:30pm"
+  const [h, m] = timeStr.split(':').map(Number);
+  const suffix = h >= 12 ? 'pm' : 'am';
+  const h12 = h % 12 || 12;
+  return `${h12}:${m.toString().padStart(2,'0')}${suffix}`;
 }
 
 // ── State ─────────────────────────────────────────────
@@ -561,7 +456,8 @@ function renderTimeline() {
     const doneClass = isDone ? 'done' : '';
     const nowClass = isNow ? 'now' : '';
 
-    html += `<div class="card ${methodClass} ${doneClass} ${nowClass}" style="animation-delay:${i*40}ms" onclick="openActions('${item.id}')">`;
+    const cardClick = (isRide && item.method === 'll' && !isDone) ? `onclick="openLLEntry('${item.id}')"` : '';
+    html += `<div class="card ${methodClass} ${doneClass} ${nowClass}" style="animation-delay:${i*40}ms" ${cardClick}>`;
     html += `<div class="card-top">`;
     html += `<span class="card-time">${item.time}</span>`;
     html += `<span class="card-title">${item.title}</span>`;
@@ -590,8 +486,13 @@ function renderTimeline() {
         html += `<div class="card-details"><span class="card-wait">\u23F1 ~${item.wait} min wait</span></div>`;
       }
     }
-    // LL return window display
+    // Secured LL window display
     if (isRide && item.method === 'll') {
+      const secured = securedLL[item.id];
+      if (secured) {
+        html += `<div class="card-ll-slot card-ll-secured">\u26A1 Secured: ${formatSecuredTime(secured)}</div>`;
+      }
+      // Auto-fetched LL return window
       const slot = llSlots[item.id];
       if (slot) {
         const staleClass = slot.fetchedAt && (Date.now() - slot.fetchedAt.getTime() > 1200000) ? ' stale' : '';
@@ -641,6 +542,11 @@ function renderChain() {
     if (step.note) html += `<div class="chain-note">${step.note}</div>`;
     if (i === 2) html += '<div class="chain-note">\u23F0 2-hour rule may apply after this step</div>';
 
+    // Secured LL window
+    const secured = securedLL[step.rideId];
+    if (secured) {
+      html += `<div class="chain-ll-secured">\u26A1 Secured: ${formatSecuredTime(secured)}</div>`;
+    }
     // LL slot pill
     const slot = llSlots[step.rideId];
     if (slot) {
@@ -1039,13 +945,14 @@ function buildFullExportJSON(includeLive) {
     _instructions: [
       'This is a Disneyland day plan for the Navigator app.',
       'To modify it, output a JSON object with ONLY the sections you want to change under a "plan" key \u2014 unchanged sections will be preserved automatically.',
-      'Sections: meta, schedule, llChain, mustDos, contingencies, proTips.',
+      'Sections: meta, schedule, llChain, mustDos.',
       'For a full replacement, include at least "schedule" in plan. If "schedule" is absent, it is treated as a partial update.',
       'Partial update example: { "plan": { "meta": { "cost": "~$40/person" } } } \u2014 this changes only the cost, everything else stays.',
       'Another example: { "plan": { "schedule": [...], "llChain": [...] } } \u2014 replaces schedule and llChain, keeps everything else.',
       'To update individual schedule items without replacing the whole schedule, use "scheduleUpdates" instead of "schedule". Each item must have an "id" matching an existing schedule item \u2014 only included fields are overwritten.',
       'scheduleUpdates example: { "plan": { "scheduleUpdates": [{ "id": "rise", "wait": 45 }] } }',
-      'You can also output the full export wrapper format with all sections if preferred.'
+      'You can also output the full export wrapper format with all sections if preferred.',
+      'The securedLLWindows show LL return windows the user has already booked — respect these times when scheduling.'
     ].join(' '),
     _schema: {
       'meta': '{ title: string, date: string, cost: string }',
@@ -1053,17 +960,25 @@ function buildFullExportJSON(includeLive) {
       'scheduleUpdates[]': '{ id: string (required, matches existing schedule id), ...any schedule fields to overwrite }',
       'llChain[]': '{ num: number, trigger: string, ride: string, park: "dca"|"dl", rideId: string (matches schedule id), note?: string }',
       'mustDos[]': '{ id: string (matches schedule id), title: string, park: string, method: string }',
-      'contingencies[]': '{ title: string, body: string }',
-      'proTips[]': 'string',
+      'securedLLWindows': '{ [schedId]: { name: string, returnWindow: string } } — LL return windows the user has already booked',
       'llReturnWindows': '{ _note: string, fetchedAt: ISO string, rides: { [schedId]: { name: string, earliestWindow: string|null, soldOut: bool } } }',
       'wishlistRides': '{ rides: { [parkDashId]: { name, park, land, waitMinutes, isOpen, llWindow, llSoldOut } } }'
     },
     plan: JSON.parse(JSON.stringify(planData)),
     completed: { ...completed },
+    securedLLWindows: Object.keys(securedLL).length > 0 ? Object.fromEntries(
+      Object.entries(securedLL).map(([id, time]) => {
+        const item = planData.schedule.find(s => s.id === id);
+        return [id, { name: item ? item.title : id, returnWindow: formatSecuredTime(time) }];
+      })
+    ) : undefined,
     exportedAt: new Date().toISOString()
   };
   // Remove version from plan level if it exists (it's at top level)
   delete exportData.plan.version;
+  // Remove clutter from exported plan
+  delete exportData.plan.contingencies;
+  delete exportData.plan.proTips;
 
   // Include live wait times if requested
   if (includeLive && Object.keys(liveWaits).length > 0) {
@@ -1156,9 +1071,10 @@ function exportPlan() {
     prompt += `The wishlisted rides in the data are ones I want to do \u2014 work them into the plan if possible.\n\n`;
   }
 
-  prompt += `Based on the current data (live wait times, LL return windows, completed rides, and wishlisted rides), give me the best updated plan for the rest of the day. Optimize for:\n`;
+  prompt += `Based on the current data (live wait times, LL return windows, secured LL windows, completed rides, and wishlisted rides), give me the best updated plan for the rest of the day. Optimize for:\n`;
   prompt += `- Minimizing wait times by hitting low-wait rides first\n`;
   prompt += `- Using LL windows effectively\n`;
+  prompt += `- The securedLLWindows show LL return windows I've already booked — respect these times\n`;
   prompt += `- Fitting in wishlisted rides where they make sense\n`;
   prompt += `- Keeping a good pace without burnout\n\n`;
   prompt += json;
@@ -1209,7 +1125,7 @@ function importPlan() {
     if (data.completed) {
       Object.assign(completed, data.completed);
     }
-  } else if (data.schedule || data.meta || data.llChain || data.mustDos || data.contingencies || data.proTips || data.scheduleUpdates) {
+  } else if (data.schedule || data.meta || data.llChain || data.mustDos || data.scheduleUpdates) {
     // Direct plan format (with or without all sections)
     newPlan = data;
   } else {
@@ -1245,15 +1161,6 @@ function importPlan() {
       showMsg('importMsg', 'mustDos must be an array.', 'error');
       return;
     }
-    if (newPlan.contingencies && !Array.isArray(newPlan.contingencies)) {
-      showMsg('importMsg', 'contingencies must be an array.', 'error');
-      return;
-    }
-    if (newPlan.proTips && !Array.isArray(newPlan.proTips)) {
-      showMsg('importMsg', 'proTips must be an array.', 'error');
-      return;
-    }
-
     // Merge: only overwrite sections that are present
     const updatedParts = [];
     if (newPlan.meta) { planData.meta = { ...planData.meta, ...newPlan.meta }; updatedParts.push('meta'); }
@@ -1296,20 +1203,12 @@ function importPlan() {
       }
     }
 
-    if (!Array.isArray(newPlan.llChain)) {
-      showMsg('importMsg', 'Missing required "llChain" array.', 'error');
-      return;
-    }
-
-    if (!Array.isArray(newPlan.mustDos)) {
-      showMsg('importMsg', 'Missing required "mustDos" array.', 'error');
-      return;
-    }
-
     // Fill in optional fields with defaults
     if (!newPlan.meta) {
       newPlan.meta = { title: 'Disneyland Navigator', date: '', cost: '' };
     }
+    if (!Array.isArray(newPlan.llChain)) newPlan.llChain = planData.llChain || [];
+    if (!Array.isArray(newPlan.mustDos)) newPlan.mustDos = planData.mustDos || [];
     if (!Array.isArray(newPlan.contingencies)) newPlan.contingencies = [];
     if (!Array.isArray(newPlan.proTips)) newPlan.proTips = [];
 

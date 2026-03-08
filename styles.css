@@ -560,14 +560,14 @@ details[open] summary::before { transform:rotate(90deg); }
   font-size:11px; color:var(--text-dim); text-align:center; padding:8px 0; margin-top:8px;
 }
 
-/* Action Sheet */
-.action-overlay {
+/* LL Input Sheet */
+.ll-input-overlay {
   position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.5);
   display:none; align-items:flex-end; justify-content:center;
   -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
 }
-.action-overlay.open { display:flex; }
-.action-sheet {
+.ll-input-overlay.open { display:flex; }
+.ll-input-sheet {
   background: rgba(18, 18, 40, 0.95);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
@@ -577,41 +577,46 @@ details[open] summary::before { transform:rotate(90deg); }
   border-top: 1px solid rgba(255,255,255,0.08);
 }
 @keyframes sheetUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
-.action-sheet-title {
+.ll-input-sheet-title {
   font-family: 'Fredoka', 'DM Sans', sans-serif;
   font-size:16px; font-weight:600; margin-bottom:2px;
 }
-.action-sheet-sub { font-size:12px; color:var(--text-dim); margin-bottom:14px; }
-.action-btn {
-  display:flex; align-items:center; gap:10px; width:100%; padding:12px 14px;
-  background: rgba(30, 30, 60, 0.6);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border:1px solid var(--border); border-radius:12px;
-  color:var(--text); font-size:14px; cursor:pointer; margin-bottom:8px;
-  text-align:left; transition:background .15s, transform .1s;
+.ll-input-sheet-sub { font-size:12px; color:var(--text-dim); margin-bottom:14px; }
+.ll-time-input {
+  width:100%; padding:12px 14px; background:rgba(16,16,36,0.8); border:1px solid var(--border);
+  border-radius:12px; color:var(--text); font-size:16px; outline:none;
+  margin-bottom:14px; font-family:'DM Sans', sans-serif;
+  color-scheme: dark;
 }
-.action-btn:active { background:rgba(40, 40, 70, 0.8); transform: scale(0.98); }
-.action-btn-icon { font-size:18px; flex-shrink:0; width:28px; text-align:center; }
-.action-cancel {
-  width:100%; padding:13px; background:transparent; border:1px solid var(--border);
-  border-radius:12px; color:var(--text-dim); font-size:14px; font-weight:600;
-  cursor:pointer; margin-top:4px;
-  transition: background .15s, color .15s;
+.ll-time-input:focus { border-color:var(--gold); box-shadow: 0 0 8px var(--gold-glow); }
+.ll-input-btns { display:flex; gap:8px; }
+.ll-input-btn {
+  flex:1; padding:12px; border-radius:12px; border:none;
+  font-size:14px; font-weight:600; cursor:pointer;
+  transition: opacity .2s, transform .1s;
 }
-.action-cancel:active { background:rgba(224, 80, 80, 0.1); color: #e05050; }
-.action-custom-wrap {
-  display:flex; gap:8px; margin-bottom:8px;
+.ll-input-btn:active { opacity:.7; transform: scale(0.97); }
+.ll-input-save {
+  background: linear-gradient(135deg, var(--gold), #ffe080); color:#000;
 }
-.action-custom-wrap input {
-  flex:1; padding:10px 12px; background:rgba(16,16,36,0.8); border:1px solid var(--border);
-  border-radius:10px; color:var(--text); font-size:14px; outline:none;
+.ll-input-clear {
+  background:rgba(224,80,80,0.15); color:#e05050; border:1px solid rgba(224,80,80,0.3);
 }
-.action-custom-wrap input:focus { border-color:var(--gold); box-shadow: 0 0 8px var(--gold-glow); }
-.action-custom-wrap button {
-  padding:10px 16px; background: linear-gradient(135deg, var(--gold), #ffe080);
-  border:none; border-radius:10px;
-  color:#000; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;
+.ll-input-cancel {
+  background:transparent; color:var(--text-dim); border:1px solid var(--border);
+}
+
+/* Secured LL display */
+.card-ll-secured {
+  margin-top:4px; font-size:11px; color:var(--gold); font-weight:600;
+  display:flex; align-items:center; gap:3px;
+  background:rgba(240,192,64,0.08); padding:3px 8px; border-radius:6px;
+  border:1px solid rgba(240,192,64,0.15);
+}
+.chain-ll-secured {
+  font-size:11px; color:var(--gold); font-weight:600; margin-top:4px; padding:4px 10px;
+  background:rgba(240,192,64,0.08); border:1px solid rgba(240,192,64,0.15);
+  border-radius:8px; display:inline-block;
 }
 
 /* Toast */
