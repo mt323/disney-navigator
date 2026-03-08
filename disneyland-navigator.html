@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a1a">
+<title>Disneyland Navigator — March 16</title>
+<style>
+:root {
+  --bg: #0a0a1a;
+  --bg-card: #141428;
+  --bg-card-done: #0e0e1e;
+  --text: #e8e8f0;
+  --text-dim: #8888a0;
+  --text-done: #55556a;
+  --dca: #e05530;
+  --dca-bg: #2a1510;
+  --dl: #3366cc;
+  --dl-bg: #101a2e;
+  --ll: #f0c040;
+  --sr: #40c8b0;
+  --standby: #a080d0;
+  --walk: #333350;
+  --accent: #6080ff;
+  --now-glow: #6080ff55;
+  --border: #222240;
+  --radius: 12px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  padding-top: var(--safe-top);
+  padding-bottom: calc(60px + var(--safe-bottom));
+  overflow-x: hidden;
+}
+
+/* Header */
+.header {
+  padding: 16px 16px 12px;
+  position: sticky; top: 0; z-index: 50;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.header-row { display:flex; align-items:center; justify-content:space-between; }
+.header h1 { font-size: 18px; font-weight: 700; }
+.header .date { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.progress-bar-wrap {
+  margin-top: 10px; display:flex; align-items:center; gap:10px;
+}
+.progress-bar {
+  flex:1; height:6px; background:#222240; border-radius:3px; overflow:hidden;
+}
+.progress-bar-fill {
+  height:100%; background: linear-gradient(90deg, var(--ll), var(--accent));
+  border-radius:3px; transition: width .4s ease;
+}
+.progress-text { font-size:12px; color:var(--text-dim); white-space:nowrap; }
+.cost { font-size:11px; color:var(--text-dim); margin-top:4px; }
+
+/* Gear button */
+.gear-btn {
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+  background:var(--bg-card); cursor:pointer; font-size:18px; display:flex;
+  align-items:center; justify-content:center; color:var(--text-dim);
+  transition: color .2s, border-color .2s; flex-shrink:0;
+}
+.gear-btn:hover { color:var(--text); border-color:var(--text-dim); }
+
+/* Tabs */
+.tabs {
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  background: #0d0d20; border-top:1px solid var(--border);
+  display:flex; justify-content:center; max-width:480px; margin:0 auto;
+  padding-bottom: var(--safe-bottom);
+}
+.tab {
+  flex:1; padding:10px 0 8px; text-align:center; font-size:11px; font-weight:600;
+  color:var(--text-dim); background:none; border:none; cursor:pointer;
+  transition: color .2s;
+}
+.tab.active { color:var(--accent); }
+.tab-icon { font-size:18px; display:block; margin-bottom:2px; }
+
+/* Views */
+.view { display:none; padding:12px 16px 24px; }
+.view.active { display:block; }
+
+/* Park Banner */
+.park-banner {
+  padding:10px 14px; border-radius:var(--radius); margin:8px 0 12px;
+  font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px;
+}
+.park-banner.dca { background:var(--dca-bg); color:var(--dca); border:1px solid #3a1a12; }
+.park-banner.dl { background:var(--dl-bg); color:var(--dl); border:1px solid #1a2a4a; }
+.park-banner .park-time { font-weight:400; font-size:12px; opacity:.7; margin-left:auto; }
+
+/* Activity Card */
+.card {
+  background:var(--bg-card); border-radius:var(--radius); padding:12px 14px;
+  margin-bottom:8px; border-left:3px solid var(--border);
+  transition: opacity .3s, transform .15s;
+  position:relative;
+}
+.card.method-ll { border-left-color:var(--ll); }
+.card.method-sr { border-left-color:var(--sr); }
+.card.method-standby { border-left-color:var(--standby); }
+.card.done { opacity:.45; }
+.card.done .card-title { text-decoration:line-through; }
+.card.now { box-shadow:0 0 0 2px var(--accent), 0 0 20px var(--now-glow); }
+@keyframes pulse-glow {
+  0%,100% { box-shadow:0 0 0 2px var(--accent), 0 0 12px var(--now-glow); }
+  50% { box-shadow:0 0 0 2px var(--accent), 0 0 24px var(--now-glow); }
+}
+.card.now { animation: pulse-glow 2.5s ease-in-out infinite; }
+
+.card-top { display:flex; align-items:center; gap:8px; }
+.card-time { font-size:12px; color:var(--text-dim); min-width:42px; font-variant-numeric:tabular-nums; }
+.card-title { font-size:14px; font-weight:600; flex:1; }
+.badge {
+  font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.badge-ll { background:#3a2e10; color:var(--ll); }
+.badge-sr { background:#0e2a24; color:var(--sr); }
+.badge-standby { background:#1e1830; color:var(--standby); }
+.badge-now { background:var(--accent); color:#fff; font-size:9px; margin-left:4px; }
+.badge-next { background:#333350; color:#bbb; font-size:9px; margin-left:4px; }
+
+.card-details { margin-top:6px; display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-dim); }
+.card-wait { display:flex; align-items:center; gap:3px; }
+.card-ll-note { margin-top:6px; font-size:11px; color:var(--ll); background:#1a1808; padding:4px 8px; border-radius:6px; }
+
+.card-check {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; border-radius:50%; border:2px solid #444460;
+  background:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition: all .2s; color:transparent; font-size:14px;
+}
+.card-check.checked {
+  border-color:var(--accent); background:var(--accent); color:#fff;
+  animation: check-pop .25s ease;
+}
+@keyframes check-pop {
+  0% { transform:translateY(-50%) scale(1); }
+  50% { transform:translateY(-50%) scale(1.25); }
+  100% { transform:translateY(-50%) scale(1); }
+}
+
+/* Walk connector */
+.walk {
+  display:flex; align-items:center; gap:8px; padding:2px 0 2px 18px;
+  margin-bottom:6px; font-size:11px; color:var(--walk); position:relative;
+}
+.walk::before {
+  content:''; position:absolute; left:7px; top:0; bottom:0;
+  width:1px; background:var(--walk);
+}
+.walk-dot {
+  width:5px; height:5px; border-radius:50%; background:var(--walk); flex-shrink:0;
+}
+
+/* LL Chain */
+.chain-step {
+  display:flex; gap:12px; padding:12px 0; position:relative;
+}
+.chain-step::before {
+  content:''; position:absolute; left:15px; top:0; bottom:0; width:2px; background:var(--border);
+}
+.chain-step:last-child::before { display:none; }
+.chain-num {
+  width:32px; height:32px; border-radius:50%; border:2px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; flex-shrink:0; z-index:1; background:var(--bg);
+}
+.chain-step.done .chain-num { border-color:var(--accent); background:var(--accent); color:#fff; }
+.chain-body { flex:1; }
+.chain-trigger { font-size:11px; color:var(--text-dim); }
+.chain-ride { font-size:14px; font-weight:600; margin-top:2px; }
+.chain-park { font-size:11px; margin-top:2px; }
+.chain-park.dca { color:var(--dca); }
+.chain-park.dl { color:var(--dl); }
+.chain-note { font-size:11px; color:var(--ll); margin-top:4px; padding:3px 8px; background:#1a1808; border-radius:6px; display:inline-block; }
+
+/* Must-Dos */
+.mustdo-item {
+  display:flex; align-items:center; gap:12px; padding:14px;
+  background:var(--bg-card); border-radius:var(--radius); margin-bottom:8px;
+}
+.mustdo-item.done { opacity:.45; }
+.mustdo-item.done .mustdo-title { text-decoration:line-through; }
+.mustdo-check {
+  width:28px; height:28px; border-radius:50%; border:2px solid #444460;
+  background:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .2s; color:transparent; font-size:14px; flex-shrink:0;
+}
+.mustdo-check.checked { border-color:var(--accent); background:var(--accent); color:#fff; animation:check-pop .25s ease; }
+.mustdo-title { font-size:14px; font-weight:600; flex:1; }
+.mustdo-meta { font-size:11px; color:var(--text-dim); }
+.mustdo-progress { font-size:13px; color:var(--text-dim); margin-bottom:12px; }
+
+/* Tips */
+details {
+  background:var(--bg-card); border-radius:var(--radius); margin-bottom:8px;
+  overflow:hidden;
+}
+summary {
+  padding:14px; font-weight:600; font-size:14px; cursor:pointer;
+  list-style:none; display:flex; align-items:center; gap:8px;
+  min-height:44px;
+}
+summary::-webkit-details-marker { display:none; }
+summary::before { content:'▸'; color:var(--text-dim); transition:transform .2s; }
+details[open] summary::before { transform:rotate(90deg); }
+.tip-content { padding:0 14px 14px; font-size:13px; color:var(--text-dim); line-height:1.5; }
+.section-title { font-size:16px; font-weight:700; margin:16px 0 10px; }
+
+/* Settings overlay */
+.settings-overlay {
+  display:none; position:fixed; inset:0; z-index:200;
+  background:var(--bg); overflow-y:auto;
+  max-width:480px; margin:0 auto;
+  padding: calc(var(--safe-top) + 16px) 16px calc(var(--safe-bottom) + 16px);
+}
+.settings-overlay.open { display:block; }
+.settings-header {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;
+}
+.settings-header h2 { font-size:18px; font-weight:700; }
+.close-btn {
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+  background:var(--bg-card); cursor:pointer; font-size:20px; display:flex;
+  align-items:center; justify-content:center; color:var(--text-dim);
+}
+.settings-section { margin-bottom:28px; }
+.settings-section h3 { font-size:14px; font-weight:600; margin-bottom:8px; color:var(--text); }
+.settings-section p { font-size:12px; color:var(--text-dim); margin-bottom:10px; line-height:1.4; }
+.settings-textarea {
+  width:100%; min-height:120px; background:var(--bg-card); border:1px solid var(--border);
+  border-radius:var(--radius); color:var(--text); font-family:monospace; font-size:11px;
+  padding:10px; resize:vertical;
+}
+.settings-btn {
+  padding:10px 20px; border-radius:var(--radius); border:none; font-weight:600;
+  font-size:13px; cursor:pointer; transition: opacity .2s;
+}
+.settings-btn:active { opacity:.7; }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-danger { background:#401818; color:#e05050; border:1px solid #602020; }
+.settings-btns { display:flex; gap:10px; flex-wrap:wrap; }
+.settings-msg {
+  font-size:12px; margin-top:8px; padding:6px 10px; border-radius:6px;
+}
+.settings-msg.success { color:#40c870; background:#0a2010; }
+.settings-msg.error { color:#e05050; background:#2a0a0a; }
+
+/* Live wait times */
+.card-wait-live { color: #f0c040; font-weight: 600; }
+.card-wait-planned { opacity: 0.6; }
+.card-closed { color: #e05050; font-size: 11px; font-weight: 600; }
+.live-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:#40c870; margin-right:4px; vertical-align:middle; }
+.live-dot.stale { background: #f0c040; }
+.attribution { font-size:10px; color:var(--text-dim); text-align:center; padding:8px 0; margin-top:16px; opacity:0.6; }
+.attribution a { color:var(--text-dim); text-decoration:underline; }
+
+/* Action Sheet */
+.action-overlay {
+  position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.6);
+  display:none; align-items:flex-end; justify-content:center;
+  -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+}
+.action-overlay.open { display:flex; }
+.action-sheet {
+  background:#1a1a30; width:100%; max-width:480px;
+  border-radius:16px 16px 0 0; padding:20px 16px calc(16px + var(--safe-bottom));
+  animation: sheetUp .25s ease-out;
+}
+@keyframes sheetUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.action-sheet-title { font-size:16px; font-weight:700; margin-bottom:2px; }
+.action-sheet-sub { font-size:12px; color:var(--text-dim); margin-bottom:14px; }
+.action-btn {
+  display:flex; align-items:center; gap:10px; width:100%; padding:12px 14px;
+  background:#222244; border:1px solid var(--border); border-radius:10px;
+  color:var(--text); font-size:14px; cursor:pointer; margin-bottom:8px;
+  text-align:left; transition:background .15s;
+}
+.action-btn:active { background:#2a2a50; }
+.action-btn-icon { font-size:18px; flex-shrink:0; width:28px; text-align:center; }
+.action-cancel {
+  width:100%; padding:13px; background:transparent; border:1px solid var(--border);
+  border-radius:10px; color:var(--text-dim); font-size:14px; font-weight:600;
+  cursor:pointer; margin-top:4px;
+}
+.action-cancel:active { background:#222244; }
+.action-custom-wrap {
+  display:flex; gap:8px; margin-bottom:8px;
+}
+.action-custom-wrap input {
+  flex:1; padding:10px 12px; background:#181830; border:1px solid var(--border);
+  border-radius:8px; color:var(--text); font-size:14px; outline:none;
+}
+.action-custom-wrap input:focus { border-color:var(--accent); }
+.action-custom-wrap button {
+  padding:10px 16px; background:var(--accent); border:none; border-radius:8px;
+  color:#fff; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;
+}
+
+/* Toast */
+.toast {
+  position:fixed; bottom:calc(70px + var(--safe-bottom)); left:50%; transform:translateX(-50%);
+  background:#40c870; color:#000; padding:10px 20px; border-radius:20px;
+  font-size:13px; font-weight:600; z-index:300; opacity:0; pointer-events:none;
+  transition:opacity .25s; white-space:nowrap;
+}
+.toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <h1 id="appTitle">Disneyland Navigator</h1>
+    <button class="gear-btn" onclick="openSettings()" aria-label="Settings">&#9881;</button>
+  </div>
+  <div class="date" id="appDate">Monday, March 16, 2026</div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText">0/15 rides</div>
+  </div>
+  <div class="cost" id="appCost">~$34/person · Lightning Lane Multi Pass</div>
+</div>
+
+<div class="view active" id="view-timeline"></div>
+<div class="view" id="view-chain"></div>
+<div class="view" id="view-mustdos"></div>
+<div class="view" id="view-tips"></div>
+
+<nav class="tabs">
+  <button class="tab active" data-view="timeline"><span class="tab-icon">&#x1F4CB;</span>Timeline</button>
+  <button class="tab" data-view="chain"><span class="tab-icon">&#x26A1;</span>LL Chain</button>
+  <button class="tab" data-view="mustdos"><span class="tab-icon">&#x2B50;</span>Must-Dos</button>
+  <button class="tab" data-view="tips"><span class="tab-icon">&#x1F4A1;</span>Tips</button>
+</nav>
+
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-header">
+    <h2>Settings</h2>
+    <button class="close-btn" onclick="closeSettings()" aria-label="Close">&#x2715;</button>
+  </div>
+
+  <div class="settings-section">
+    <h3>Export Plan</h3>
+    <p>Copy your plan + progress as JSON to share with Claude. Claude can return the full plan or just the sections that changed.</p>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="exportLiveWaits" checked> Include live wait times
+    </label>
+    <div class="settings-btns">
+      <button class="settings-btn btn-primary" onclick="exportPlan()">Copy to Clipboard</button>
+    </div>
+    <textarea class="settings-textarea" id="exportArea" readonly style="margin-top:10px;display:none;"></textarea>
+    <div id="exportMsg"></div>
+  </div>
+
+  <div class="settings-section">
+    <h3>Import Plan</h3>
+    <p>Paste updated JSON from Claude. Supports full plans or partial updates (only changed sections).</p>
+    <textarea class="settings-textarea" id="importArea" placeholder="Paste JSON here..."></textarea>
+    <div class="settings-btns" style="margin-top:10px;">
+      <button class="settings-btn btn-primary" onclick="importPlan()">Import Plan</button>
+    </div>
+    <div id="importMsg"></div>
+  </div>
+
+  <div class="settings-section">
+    <h3>Live Wait Times</h3>
+    <p id="liveWaitsStatus">Checking...</p>
+  </div>
+
+  <div class="settings-section">
+    <h3>Reset</h3>
+    <p>Restore the default built-in plan and clear any imported data.</p>
+    <div class="settings-btns">
+      <button class="settings-btn btn-danger" onclick="resetPlan()">Reset to Default</button>
+    </div>
+    <div id="resetMsg"></div>
+  </div>
+</div>
+
+<div class="action-overlay" id="actionOverlay" onclick="closeActions()">
+  <div class="action-sheet" onclick="event.stopPropagation()">
+    <div id="actionSheetBody"></div>
+    <button class="action-cancel" onclick="closeActions()">Cancel</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Default Plan Data ─────────────────────────────────
+const DEFAULT_PLAN = {
+  version: 1,
+  meta: {
+    title: 'Disneyland Navigator',
+    date: 'Monday, March 16, 2026',
+    cost: '~$34/person \u00b7 Lightning Lane Multi Pass'
+  },
+  schedule: [
+    // DCA
+    {id:'enter-dca',time:'11:00',m:660,title:'Enter DCA \u2014 Book LL #1: Guardians',park:'dca',type:'action',method:null,wait:null,isMustDo:false,llNote:null},
+    {id:'walk-carsland',time:'11:05',m:665,title:'Walk to Cars Land',park:'dca',type:'walk',method:null,wait:10,isMustDo:false,llNote:null},
+    {id:'radiator-springs',time:'11:15',m:675,title:'Radiator Springs Racers',park:'dca',type:'ride',method:'sr',wait:15,isMustDo:true,llNote:null},
+    {id:'walk-avengers',time:'11:35',m:695,title:'Walk to Avengers Campus',park:'dca',type:'walk',method:null,wait:8,isMustDo:false,llNote:null},
+    {id:'guardians',time:'11:45',m:705,title:'Guardians: Mission BREAKOUT',park:'dca',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #2: Incredicoaster'},
+    {id:'walk-webslingers',time:'12:00',m:720,title:'Walk to Web Slingers',park:'dca',type:'walk',method:null,wait:2,isMustDo:false,llNote:null},
+    {id:'webslingers',time:'12:05',m:725,title:'Web Slingers: Spider-Man',park:'dca',type:'ride',method:'sr',wait:10,isMustDo:false,llNote:null},
+    {id:'walk-pixarpier',time:'12:20',m:740,title:'Walk to Pixar Pier',park:'dca',type:'walk',method:null,wait:5,isMustDo:false,llNote:null},
+    {id:'incredicoaster',time:'12:30',m:750,title:'Incredicoaster',park:'dca',type:'ride',method:'ll',wait:5,isMustDo:false,llNote:'Tap in \u2192 book LL #3: Soarin\' Over California'},
+    {id:'walk-grizzly',time:'12:40',m:760,title:'Walk to Grizzly Peak',park:'dca',type:'walk',method:null,wait:7,isMustDo:false,llNote:null},
+    {id:'soarin',time:'12:50',m:770,title:'Soarin\' Over California',park:'dca',type:'ride',method:'ll',wait:10,isMustDo:false,llNote:'Tap in \u2192 book LL #4: Tiana\'s Bayou Adventure (Disneyland!)'},
+    {id:'lunch',time:'1:05',m:785,title:'Lunch \u2014 San Fransokyo Square',park:'dca',type:'meal',method:null,wait:30,isMustDo:false,llNote:null},
+    {id:'walk-disneyland',time:'1:35',m:815,title:'Walk to Disneyland',park:'dca',type:'walk',method:null,wait:25,isMustDo:false,llNote:null},
+
+    // Disneyland
+    {id:'enter-dl',time:'2:00',m:840,title:'Enter Disneyland \u2014 Walk to Adventureland',park:'dl',type:'action',method:null,wait:7,isMustDo:false,llNote:null},
+    {id:'indiana-jones',time:'2:10',m:850,title:'Indiana Jones Adventure',park:'dl',type:'ride',method:'sr',wait:18,isMustDo:true,llNote:null},
+    {id:'walk-critter',time:'2:30',m:870,title:'Walk to Critter Country',park:'dl',type:'walk',method:null,wait:5,isMustDo:false,llNote:null},
+    {id:'tianas',time:'2:40',m:880,title:'Tiana\'s Bayou Adventure',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:false,llNote:'Tap in \u2192 book LL #5: Haunted Mansion'},
+    {id:'walk-neworleans',time:'2:55',m:895,title:'Walk to New Orleans Square',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
+    {id:'haunted-mansion',time:'3:00',m:900,title:'Haunted Mansion',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #6: Big Thunder'},
+    {id:'pirates',time:'3:15',m:915,title:'Pirates of the Caribbean',park:'dl',type:'ride',method:'standby',wait:15,isMustDo:false,llNote:null},
+    {id:'walk-frontier',time:'3:35',m:935,title:'Walk to Frontierland',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
+    {id:'big-thunder',time:'3:40',m:940,title:'Big Thunder Mountain',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #7: Space Mountain'},
+    {id:'walk-tomorrow1',time:'3:55',m:955,title:'Walk to Tomorrowland',park:'dl',type:'walk',method:null,wait:10,isMustDo:false,llNote:null},
+    {id:'space-mountain',time:'4:10',m:970,title:'Space Mountain',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #8: Matterhorn'},
+    {id:'walk-fantasy',time:'4:25',m:985,title:'Walk to Fantasyland',park:'dl',type:'walk',method:null,wait:5,isMustDo:false,llNote:null},
+    {id:'matterhorn',time:'4:30',m:990,title:'Matterhorn Bobsleds',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:false,llNote:'Tap in \u2192 book LL #9: Buzz Lightyear'},
+    {id:'walk-tomorrow2',time:'4:45',m:1005,title:'Walk to Tomorrowland',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
+    {id:'buzz',time:'4:50',m:1010,title:'Buzz Lightyear Astro Blasters',park:'dl',type:'ride',method:'ll',wait:5,isMustDo:false,llNote:null},
+    {id:'dinner',time:'5:00',m:1020,title:'Dinner \u2014 Docking Bay 7 / Bengal BBQ',park:'dl',type:'meal',method:null,wait:45,isMustDo:false,llNote:null},
+    {id:'walk-galaxy',time:'5:45',m:1065,title:'Walk to Galaxy\'s Edge',park:'dl',type:'walk',method:null,wait:8,isMustDo:false,llNote:null},
+    {id:'smugglers-run',time:'5:55',m:1075,title:'Smuggler\'s Run',park:'dl',type:'ride',method:'sr',wait:13,isMustDo:false,llNote:null},
+    {id:'explore-galaxy',time:'6:15',m:1095,title:'Explore Galaxy\'s Edge',park:'dl',type:'action',method:null,wait:15,isMustDo:false,llNote:null},
+    {id:'rise',time:'6:30',m:1110,title:'Rise of the Resistance',park:'dl',type:'ride',method:'standby',wait:55,isMustDo:true,llNote:null},
+    {id:'rise-experience',time:'7:25',m:1125,title:'Experience Rise (pre-shows)',park:'dl',type:'action',method:null,wait:null,isMustDo:false,llNote:null},
+    {id:'free-time',time:'7:45',m:1185,title:'Main Street shopping, churros',park:'dl',type:'action',method:null,wait:15,isMustDo:false,llNote:null},
+    {id:'head-out',time:'8:00',m:1200,title:'Head out!',park:'dl',type:'action',method:null,wait:null,isMustDo:false,llNote:null},
+  ],
+  llChain: [
+    {num:1,trigger:'11:00 (park entry)',ride:'Guardians: Mission BREAKOUT',park:'dca',rideId:'guardians'},
+    {num:2,trigger:'Tap Guardians',ride:'Incredicoaster',park:'dca',rideId:'incredicoaster'},
+    {num:3,trigger:'Tap Incredicoaster',ride:'Soarin\' Over California',park:'dca',rideId:'soarin',note:null},
+    {num:4,trigger:'Tap Soarin\'',ride:'Tiana\'s Bayou Adventure',park:'dl',rideId:'tianas',note:'Cross-park book \u2014 the key move'},
+    {num:5,trigger:'Tap Tiana\'s',ride:'Haunted Mansion',park:'dl',rideId:'haunted-mansion'},
+    {num:6,trigger:'Tap Haunted Mansion',ride:'Big Thunder Mountain',park:'dl',rideId:'big-thunder'},
+    {num:7,trigger:'Tap Big Thunder',ride:'Space Mountain',park:'dl',rideId:'space-mountain'},
+    {num:8,trigger:'Tap Space Mountain',ride:'Matterhorn Bobsleds',park:'dl',rideId:'matterhorn'},
+    {num:9,trigger:'Tap Matterhorn',ride:'Buzz Lightyear Astro Blasters',park:'dl',rideId:'buzz'},
+  ],
+  mustDos: [
+    {id:'radiator-springs',title:'Radiator Springs Racers',park:'DCA',method:'SR'},
+    {id:'guardians',title:'Guardians: Mission BREAKOUT',park:'DCA',method:'LL'},
+    {id:'rise',title:'Rise of the Resistance',park:'Disneyland',method:'Standby'},
+    {id:'indiana-jones',title:'Indiana Jones Adventure',park:'Disneyland',method:'SR'},
+    {id:'space-mountain',title:'Space Mountain',park:'Disneyland',method:'LL'},
+    {id:'big-thunder',title:'Big Thunder Mountain',park:'Disneyland',method:'LL'},
+    {id:'haunted-mansion',title:'Haunted Mansion',park:'Disneyland',method:'LL'},
+  ],
+  contingencies: [
+    {title:'Haunted Mansion has Virtual Queue',body:'Drop it from the LL chain. Book Tiana\'s \u2192 Big Thunder \u2192 Space Mountain \u2192 Matterhorn \u2192 Buzz \u2192 Star Tours. Join the Haunted Mansion VQ in the app when it drops.'},
+    {title:'Rise of the Resistance standby exceeds 70 min',body:'Check the app at 5:30. If it\'s 70+, consider riding Smuggler\'s Run first and checking again at 6:15. Monday evenings usually dip to 45-55 min by 6:30-7:00pm.'},
+    {title:'LL return window pushed way out',body:'Use the 2-hour rule \u2014 if your window is 2+ hours away, you can book your next LL exactly 120 min after your last booking without tapping in.'},
+    {title:'Web Slingers SR is unusually long',body:'Use LL instead and redirect the freed SR time. Swap your LL chain to book Web Slingers early and use the saved slot for Toy Story Midway Mania later.'},
+  ],
+  proTips: [
+    'Buy Multi Pass on March 9 (7 days ahead, 7:00am PT) to lock in the lowest price.',
+    'Mobile order lunch at 12:30 while walking to Incredicoaster \u2014 pickup at San Fransokyo Square after Soarin\'.',
+    'Mobile order dinner at 4:30 for Docking Bay 7 \u2014 walk straight in after Buzz.',
+    'Soarin\' is currently "Over California" for DCA\'s 25th anniversary (through July 1, 2026) \u2014 the original film.',
+    'Smuggler\'s Run double rider \u2014 pairs of 2 can ride together now. You\'ll likely be engineers but the ride is still great.',
+    'Rise of the Resistance queue is themed and incredible \u2014 don\'t rush through it.',
+    'Bring a portable charger \u2014 the Disneyland app drains battery with all the LL bookings.',
+    'March 16 is before spring break (LAUSD starts ~March 30) \u2014 moderate Monday crowds expected.',
+    'Tap at the second touchpoint (right before loading zone) to book your next LL a few minutes earlier.',
+  ]
+};
+
+// ── Plan Loading ─────────────────────────────────────
+const PLAN_STORAGE_KEY = 'disney-plan-data-2026-03-16';
+let planData;
+
+function loadPlan() {
+  try {
+    const stored = localStorage.getItem(PLAN_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed && parsed.schedule && parsed.schedule.length) {
+        planData = parsed;
+        return;
+      }
+    }
+  } catch(e) {}
+  planData = DEFAULT_PLAN;
+}
+
+loadPlan();
+
+// ── Schedule Merge Helper ────────────────────────────
+function mergeScheduleUpdates(schedule, updates) {
+  const idxMap = new Map();
+  schedule.forEach((item, i) => idxMap.set(item.id, i));
+  const notFound = [];
+  updates.forEach(update => {
+    if (!update.id) return;
+    const idx = idxMap.get(update.id);
+    if (idx !== undefined) {
+      schedule[idx] = { ...schedule[idx], ...update };
+    } else {
+      notFound.push(update.id);
+    }
+  });
+  return notFound;
+}
+
+// ── Live Wait Times ──────────────────────────────────
+const CORS_PROXIES = [
+  url => 'https://corsproxy.io/?' + encodeURIComponent(url),
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+];
+const QUEUE_TIMES_BASE = {
+  dl: 'https://queue-times.com/parks/16/queue_times.json',
+  dca: 'https://queue-times.com/parks/17/queue_times.json'
+};
+
+async function fetchWithCorsRetry(url) {
+  // Try direct first
+  try {
+    const r = await fetch(url);
+    if (r.ok) return r.json();
+  } catch(e) {}
+  // Try each proxy
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const r = await fetch(proxy(url));
+      if (r.ok) return r.json();
+    } catch(e) {}
+  }
+  return null;
+}
+let liveWaits = {};
+let lastFetchTime = null;
+
+function normalizeRideName(name) {
+  return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function similarityScore(a, b) {
+  const na = normalizeRideName(a);
+  const nb = normalizeRideName(b);
+  if (na === nb) return 1.0;
+  if (na.includes(nb) || nb.includes(na)) return 0.8;
+  const wordsA = new Set(na.split(' ').filter(w => w.length > 2));
+  const wordsB = new Set(nb.split(' ').filter(w => w.length > 2));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  let intersection = 0;
+  wordsA.forEach(w => { if (wordsB.has(w)) intersection++; });
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return intersection / union;
+}
+
+function findBestMatch(title, apiRides) {
+  let best = null;
+  let bestScore = 0;
+  apiRides.forEach(ride => {
+    const score = similarityScore(title, ride.name);
+    if (score > bestScore) {
+      bestScore = score;
+      best = ride;
+    }
+  });
+  return bestScore >= 0.3 ? best : null;
+}
+
+async function fetchLiveWaits() {
+  try {
+    const [dlRes, dcaRes] = await Promise.all([
+      fetchWithCorsRetry(QUEUE_TIMES_BASE.dl),
+      fetchWithCorsRetry(QUEUE_TIMES_BASE.dca)
+    ]);
+
+    if (!dlRes && !dcaRes) {
+      updateLiveWaitsStatus(0, 'Could not reach Queue-Times API');
+      return;
+    }
+
+    const apiRides = { dl: [], dca: [] };
+    [['dl', dlRes], ['dca', dcaRes]].forEach(([park, res]) => {
+      if (res && res.lands) {
+        res.lands.forEach(land => {
+          if (land.rides) apiRides[park].push(...land.rides);
+        });
+      }
+    });
+
+    liveWaits = {};
+    let matchCount = 0;
+    planData.schedule.forEach(item => {
+      if (item.type !== 'ride') return;
+      const park = item.park;
+      if (!apiRides[park] || apiRides[park].length === 0) return;
+      const match = findBestMatch(item.title, apiRides[park]);
+      if (match) {
+        liveWaits[item.id] = {
+          wait_time: match.wait_time,
+          is_open: match.is_open,
+          last_updated: match.last_updated,
+          api_name: match.name
+        };
+        matchCount++;
+      }
+    });
+
+    lastFetchTime = new Date();
+    updateLiveWaitsStatus(matchCount, null);
+    renderTimeline();
+  } catch (err) {
+    console.warn('Live wait times unavailable:', err);
+    updateLiveWaitsStatus(0, err.message);
+  }
+}
+
+function updateLiveWaitsStatus(matchCount, error) {
+  const el = document.getElementById('liveWaitsStatus');
+  if (!el) return;
+  if (error) {
+    el.textContent = 'Unavailable: ' + error;
+    el.style.color = '#e05050';
+  } else if (matchCount > 0) {
+    const ago = lastFetchTime ? Math.round((Date.now() - lastFetchTime.getTime()) / 60000) : 0;
+    el.textContent = `Active — ${matchCount} rides matched · updated ${ago < 1 ? 'just now' : ago + ' min ago'}`;
+    el.style.color = '#40c870';
+  } else {
+    el.textContent = 'No rides matched from API data.';
+    el.style.color = 'var(--text-dim)';
+  }
+}
+
+// ── Quick Actions ─────────────────────────────────────
+let activeCardId = null;
+
+function openActions(id) {
+  const item = planData.schedule.find(s => s.id === id);
+  if (!item || item.type === 'walk') return;
+  activeCardId = id;
+
+  const isDone = !!completed[id];
+  const isRide = item.type === 'ride';
+  const live = liveWaits[id];
+  const liveStr = live && live.is_open ? `${live.wait_time} min live` : (live && !live.is_open ? 'CLOSED' : '');
+
+  let html = `<div class="action-sheet-title">${item.title}</div>`;
+  let subParts = [item.time];
+  if (item.method) subParts.push(item.method.toUpperCase());
+  if (liveStr) subParts.push(liveStr);
+  html += `<div class="action-sheet-sub">${subParts.join(' · ')}</div>`;
+
+  if (isRide && !isDone) {
+    html += btn('🚫', 'Ride is down', 'down');
+    html += btn('⏱', 'Wait too long', 'wait-long');
+    if (item.method === 'll') html += btn('⚡', 'Missed LL window', 'missed-ll');
+    if (item.method === 'll') {
+      html += `<div class="action-custom-wrap" id="llTimesWrap" style="display:none;">
+        <input type="text" id="llTimesInput" placeholder="e.g. Guardians 1:30, Incred 2:15" />
+        <button onclick="sendAction('ll-times')">Copy</button>
+      </div>`;
+      html += btn('🎟', 'LL times available', 'show-ll-times');
+    }
+    html += btn('⏭', 'Skip this', 'skip');
+  }
+  if (isRide && isDone) {
+    html += btn('🔄', 'Ride again', 'ride-again');
+  }
+
+  // Universal (non-walk)
+  html += btn('🕐', 'Running behind', 'behind');
+  html += btn('🏃', 'Ahead of schedule', 'ahead');
+  html += btn('🍽', 'Need a break', 'break');
+  html += `<div class="action-custom-wrap" id="customNoteWrap" style="display:none;">
+    <input type="text" id="customNoteInput" placeholder="Type a note…" />
+    <button onclick="sendAction('custom')">Copy</button>
+  </div>`;
+  html += btn('📝', 'Custom note', 'show-custom');
+
+  document.getElementById('actionSheetBody').innerHTML = html;
+  document.getElementById('actionOverlay').classList.add('open');
+}
+
+function btn(icon, label, type) {
+  let onclick;
+  if (type === 'show-custom') {
+    onclick = `document.getElementById('customNoteWrap').style.display='flex';document.getElementById('customNoteInput').focus();`;
+  } else if (type === 'show-ll-times') {
+    onclick = `document.getElementById('llTimesWrap').style.display='flex';document.getElementById('llTimesInput').focus();`;
+  } else {
+    onclick = `sendAction('${type}')`;
+  }
+  return `<button class="action-btn" onclick="${onclick}"><span class="action-btn-icon">${icon}</span>${label}</button>`;
+}
+
+function closeActions() {
+  document.getElementById('actionOverlay').classList.remove('open');
+  activeCardId = null;
+}
+
+function generateCompactContext() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+  const rides = planData.schedule.filter(s => s.type === 'ride');
+  const doneCount = rides.filter(r => completed[r.id]).length;
+
+  let lines = [];
+  lines.push(`📍 ${timeStr} · ${doneCount}/${rides.length} rides done`);
+
+  const item = planData.schedule.find(s => s.id === activeCardId);
+  if (item) {
+    let pin = `📌 ${item.title}`;
+    if (item.method) pin += ` (${item.method.toUpperCase()})`;
+    const live = liveWaits[item.id];
+    if (live && live.is_open) pin += ` · live: ${live.wait_time} min`;
+    else if (live && !live.is_open) pin += ' · CLOSED';
+    lines.push(pin);
+  }
+
+  return { header: lines.join('\n'), item };
+}
+
+function sendAction(type) {
+  const { header, item } = generateCompactContext();
+  if (!item) return;
+
+  let issue = '';
+  let ask = '';
+  const live = liveWaits[item.id];
+  const liveMin = live && live.is_open ? live.wait_time : null;
+
+  switch (type) {
+    case 'down':
+      issue = `⚠️ ${item.title} is closed/down`;
+      ask = 'What should I do instead?';
+      break;
+    case 'wait-long':
+      issue = `⚠️ Wait for ${item.title} is too long` + (liveMin ? ` (${liveMin} min live)` : '');
+      ask = 'Should I skip it, come back later, or switch strategy?';
+      break;
+    case 'missed-ll':
+      issue = `⚠️ Missed my LL window for ${item.title}`;
+      ask = 'How should I adjust the LL chain?';
+      break;
+    case 'skip':
+      issue = `⏭ Skipping ${item.title}`;
+      ask = 'What should I do with the freed time?';
+      break;
+    case 'ride-again':
+      issue = `🔄 Want to ride ${item.title} again`;
+      ask = 'Can you fit it in?';
+      break;
+    case 'behind':
+      issue = `🕐 Running behind schedule at ${item.title}`;
+      ask = 'What should I cut or rearrange?';
+      break;
+    case 'ahead':
+      issue = `🏃 Finished ${item.title} early`;
+      ask = 'What should I add or do next?';
+      break;
+    case 'break':
+      issue = `🍽 Need food/rest near ${item.title}`;
+      ask = 'Where should I go and how to adjust the plan?';
+      break;
+    case 'll-times': {
+      const text = document.getElementById('llTimesInput').value.trim();
+      if (!text) return;
+      issue = `🎟 LL times I can see: ${text}`;
+      ask = 'Based on these available windows, should I adjust the LL chain order or timing?';
+      break;
+    }
+    case 'custom': {
+      const text = document.getElementById('customNoteInput').value.trim();
+      if (!text) return;
+      issue = `📝 Note about ${item.title}: ${text}`;
+      ask = 'How should I adjust?';
+      break;
+    }
+  }
+
+  const fullExport = buildFullExportJSON();
+  const msg = `[Disneyland Navigator — Quick Update]\n\n${header}\n\n${issue}\n\n${ask}\n\n${fullExport}`;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(msg).then(() => {
+      showToast('Copied to clipboard!');
+      closeActions();
+    }).catch(() => {
+      showToast('Clipboard failed');
+    });
+  } else {
+    showToast('Clipboard not available');
+  }
+}
+
+function showToast(text) {
+  const el = document.getElementById('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── State ─────────────────────────────────────────────
+const STORAGE_KEY = 'disney-trip-2026-03-16';
+let completed = {};
+try { completed = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) {}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(completed)); }
+function toggle(id) { completed[id] ? delete completed[id] : completed[id] = true; save(); render(); }
+
+// ── Render ────────────────────────────────────────────
+function getNow() {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function findCurrentIdx() {
+  const now = getNow();
+  let idx = -1;
+  for (let i = 0; i < planData.schedule.length; i++) {
+    if (planData.schedule[i].m <= now) idx = i;
+  }
+  return idx;
+}
+
+function renderHeader() {
+  document.getElementById('appTitle').textContent = planData.meta.title;
+  document.getElementById('appDate').textContent = planData.meta.date;
+  document.getElementById('appCost').textContent = planData.meta.cost;
+}
+
+function renderTimeline() {
+  const el = document.getElementById('view-timeline');
+  const schedule = planData.schedule;
+  const nowIdx = findCurrentIdx();
+  let nextRideIdx = -1;
+  if (nowIdx >= 0) {
+    for (let i = nowIdx + 1; i < schedule.length; i++) {
+      if (schedule[i].type === 'ride' && !completed[schedule[i].id]) { nextRideIdx = i; break; }
+    }
+  }
+
+  let html = '';
+  let currentPark = null;
+
+  schedule.forEach((item, i) => {
+    // Park banner
+    if (item.park !== currentPark) {
+      currentPark = item.park;
+      if (currentPark === 'dca') {
+        html += '<div class="park-banner dca">\u{1F3D6}\uFE0F Disney California Adventure<span class="park-time">11:00 \u2013 1:55</span></div>';
+      } else {
+        html += '<div class="park-banner dl">\u{1F3F0} Disneyland Park<span class="park-time">2:00 \u2013 8:00</span></div>';
+      }
+    }
+
+    // Walk connector
+    if (item.type === 'walk') {
+      html += `<div class="walk"><span class="walk-dot"></span>${item.title} \u00b7 ${item.wait} min</div>`;
+      return;
+    }
+
+    const isRide = item.type === 'ride';
+    const isDone = !!completed[item.id];
+    const isNow = i === nowIdx && !isDone;
+    const isNext = i === nextRideIdx && !isDone;
+    const methodClass = item.method ? `method-${item.method}` : '';
+    const doneClass = isDone ? 'done' : '';
+    const nowClass = isNow ? 'now' : '';
+
+    html += `<div class="card ${methodClass} ${doneClass} ${nowClass}" onclick="openActions('${item.id}')">`;
+    html += `<div class="card-top">`;
+    html += `<span class="card-time">${item.time}</span>`;
+    html += `<span class="card-title">${item.title}</span>`;
+    if (item.method === 'll') html += '<span class="badge badge-ll">LL</span>';
+    if (item.method === 'sr') html += '<span class="badge badge-sr">SR</span>';
+    if (item.method === 'standby') html += '<span class="badge badge-standby">Standby</span>';
+    if (isNow) html += '<span class="badge badge-now">NOW</span>';
+    if (isNext) html += '<span class="badge badge-next">NEXT</span>';
+    html += '</div>';
+
+    if (isRide) {
+      const live = liveWaits[item.id];
+      if (live && live.is_open) {
+        const staleClass = lastFetchTime && (Date.now() - lastFetchTime.getTime() > 600000) ? ' stale' : '';
+        html += `<div class="card-details"><span class="card-wait card-wait-live"><span class="live-dot${staleClass}"></span>${live.wait_time} min live</span>`;
+        if (item.wait != null) html += `<span class="card-wait card-wait-planned"> \u00b7 ~${item.wait} min planned</span>`;
+        html += `</div>`;
+      } else if (live && !live.is_open) {
+        html += `<div class="card-details"><span class="card-closed">CLOSED</span>`;
+        if (item.wait != null) html += `<span class="card-wait card-wait-planned"> \u00b7 ~${item.wait} min planned</span>`;
+        html += `</div>`;
+      } else if (item.wait != null) {
+        html += `<div class="card-details"><span class="card-wait">\u23F1 ~${item.wait} min wait</span></div>`;
+      }
+    }
+    if (item.wait != null && item.type === 'meal') {
+      html += `<div class="card-details"><span class="card-wait">\u{1F37D} ~${item.wait} min</span></div>`;
+    }
+    if (item.llNote) {
+      html += `<div class="card-ll-note">\u26A1 ${item.llNote}</div>`;
+    }
+
+    if (isRide) {
+      html += `<button class="card-check ${isDone?'checked':''}" onclick="event.stopPropagation();toggle('${item.id}')" aria-label="Mark complete">${isDone?'\u2713':''}</button>`;
+    }
+
+    html += '</div>';
+  });
+
+  if (Object.keys(liveWaits).length > 0) {
+    html += '<div class="attribution">Wait times powered by <a href="https://queue-times.com" target="_blank" rel="noopener">Queue-Times.com</a></div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function renderChain() {
+  const el = document.getElementById('view-chain');
+  const chain = planData.llChain;
+  let html = '<div class="section-title">Lightning Lane Booking Chain</div>';
+  html += '<p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;">Book one at a time. After tapping in, immediately book the next.</p>';
+
+  chain.forEach((step, i) => {
+    const isDone = !!completed[step.rideId];
+    html += `<div class="chain-step ${isDone?'done':''}">`;
+    html += `<div class="chain-num">${isDone?'\u2713':step.num}</div>`;
+    html += '<div class="chain-body">';
+    html += `<div class="chain-trigger">${step.trigger}</div>`;
+    html += `<div class="chain-ride">${step.ride}</div>`;
+    html += `<div class="chain-park ${step.park}">${step.park==='dca'?'California Adventure':'Disneyland'}</div>`;
+    if (step.note) html += `<div class="chain-note">${step.note}</div>`;
+    if (i === 2) html += '<div class="chain-note">\u23F0 2-hour rule may apply after this step</div>';
+    html += '</div></div>';
+  });
+
+  el.innerHTML = html;
+}
+
+function renderMustDos() {
+  const el = document.getElementById('view-mustdos');
+  const mustDos = planData.mustDos;
+  const doneCount = mustDos.filter(m => completed[m.id]).length;
+  let html = '<div class="section-title">Must-Do Rides</div>';
+  html += `<div class="mustdo-progress">${doneCount}/${mustDos.length} must-dos complete</div>`;
+
+  mustDos.forEach(m => {
+    const isDone = !!completed[m.id];
+    html += `<div class="mustdo-item ${isDone?'done':''}">`;
+    html += `<button class="mustdo-check ${isDone?'checked':''}" onclick="toggle('${m.id}')" aria-label="Mark complete">${isDone?'\u2713':''}</button>`;
+    html += `<span class="mustdo-title">${m.title}</span>`;
+    html += `<span class="mustdo-meta">${m.park} \u00b7 ${m.method}</span>`;
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+function renderTips() {
+  const el = document.getElementById('view-tips');
+  let html = '<div class="section-title">Contingencies</div>';
+
+  planData.contingencies.forEach(c => {
+    html += `<details><summary>${c.title}</summary><div class="tip-content">${c.body}</div></details>`;
+  });
+
+  html += '<div class="section-title" style="margin-top:20px;">Pro Tips</div>';
+  planData.proTips.forEach(t => {
+    html += `<details><summary>${t.split('.')[0]}</summary><div class="tip-content">${t}</div></details>`;
+  });
+
+  el.innerHTML = html;
+}
+
+function updateProgress() {
+  const rides = planData.schedule.filter(s => s.type === 'ride');
+  const total = rides.length;
+  const done = rides.filter(r => completed[r.id]).length;
+  document.getElementById('progressFill').style.width = `${(done/total)*100}%`;
+  document.getElementById('progressText').textContent = `${done}/${total} rides`;
+}
+
+function render() {
+  renderHeader();
+  renderTimeline();
+  renderChain();
+  renderMustDos();
+  renderTips();
+  updateProgress();
+}
+
+// ── Settings ──────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('open');
+  // Clear previous messages
+  document.getElementById('exportMsg').innerHTML = '';
+  document.getElementById('importMsg').innerHTML = '';
+  document.getElementById('resetMsg').innerHTML = '';
+  document.getElementById('exportArea').style.display = 'none';
+  document.getElementById('importArea').value = '';
+  // Refresh live waits status display
+  const matchCount = Object.keys(liveWaits).length;
+  if (lastFetchTime) {
+    updateLiveWaitsStatus(matchCount, null);
+  }
+  // Enable/disable live waits export checkbox based on availability
+  const liveCheckbox = document.getElementById('exportLiveWaits');
+  if (matchCount === 0) {
+    liveCheckbox.checked = false;
+    liveCheckbox.disabled = true;
+    liveCheckbox.parentElement.style.opacity = '0.4';
+  } else {
+    liveCheckbox.disabled = false;
+    liveCheckbox.parentElement.style.opacity = '1';
+  }
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+}
+
+function showMsg(elId, text, type) {
+  document.getElementById(elId).innerHTML = `<div class="settings-msg ${type}">${text}</div>`;
+}
+
+function buildFullExportJSON(includeLive) {
+  if (includeLive === undefined) includeLive = true;
+  const exportData = {
+    version: 1,
+    _instructions: [
+      'This is a Disneyland day plan for the Navigator app.',
+      'To modify it, output a JSON object with ONLY the sections you want to change under a "plan" key — unchanged sections will be preserved automatically.',
+      'Sections: meta, schedule, llChain, mustDos, contingencies, proTips.',
+      'For a full replacement, include at least "schedule" in plan. If "schedule" is absent, it is treated as a partial update.',
+      'Partial update example: { "plan": { "meta": { "cost": "~$40/person" } } } — this changes only the cost, everything else stays.',
+      'Another example: { "plan": { "schedule": [...], "llChain": [...] } } — replaces schedule and llChain, keeps everything else.',
+      'To update individual schedule items without replacing the whole schedule, use "scheduleUpdates" instead of "schedule". Each item must have an "id" matching an existing schedule item — only included fields are overwritten.',
+      'scheduleUpdates example: { "plan": { "scheduleUpdates": [{ "id": "rise", "wait": 45 }] } }',
+      'You can also output the full export wrapper format with all sections if preferred.'
+    ].join(' '),
+    _schema: {
+      'meta': '{ title: string, date: string, cost: string }',
+      'schedule[]': '{ id: string, time: string (e.g. "2:00"), m: number (minutes since midnight), title: string, park: "dca"|"dl", type: "ride"|"walk"|"meal"|"action", method: "ll"|"sr"|"standby"|null, wait: number|null (minutes), isMustDo: bool, llNote: string|null }',
+      'scheduleUpdates[]': '{ id: string (required, matches existing schedule id), ...any schedule fields to overwrite }',
+      'llChain[]': '{ num: number, trigger: string, ride: string, park: "dca"|"dl", rideId: string (matches schedule id), note?: string }',
+      'mustDos[]': '{ id: string (matches schedule id), title: string, park: string, method: string }',
+      'contingencies[]': '{ title: string, body: string }',
+      'proTips[]': 'string'
+    },
+    plan: JSON.parse(JSON.stringify(planData)),
+    completed: { ...completed },
+    exportedAt: new Date().toISOString()
+  };
+  // Remove version from plan level if it exists (it's at top level)
+  delete exportData.plan.version;
+
+  // Include live wait times if requested
+  if (includeLive && Object.keys(liveWaits).length > 0) {
+    exportData.liveWaitTimes = {
+      _note: 'Real-time wait data from Queue-Times.com, fetched at the time of export. Use these to advise on schedule adjustments.',
+      fetchedAt: lastFetchTime ? lastFetchTime.toISOString() : null,
+      rides: {}
+    };
+    for (const id in liveWaits) {
+      const lw = liveWaits[id];
+      const item = planData.schedule.find(s => s.id === id);
+      exportData.liveWaitTimes.rides[id] = {
+        name: item ? item.title : id,
+        liveWait: lw.wait_time,
+        plannedWait: item ? item.wait : null,
+        isOpen: lw.is_open,
+        apiName: lw.api_name
+      };
+    }
+  }
+
+  return JSON.stringify(exportData, null, 2);
+}
+
+function exportPlan() {
+  const includeLive = document.getElementById('exportLiveWaits').checked;
+  const json = buildFullExportJSON(includeLive);
+
+  // Show in textarea as fallback
+  const area = document.getElementById('exportArea');
+  area.value = json;
+  area.style.display = 'block';
+
+  // Try clipboard
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json).then(() => {
+      showMsg('exportMsg', 'Copied to clipboard!', 'success');
+    }).catch(() => {
+      showMsg('exportMsg', 'Clipboard failed \u2014 copy from the text box below.', 'error');
+      area.select();
+    });
+  } else {
+    showMsg('exportMsg', 'Clipboard not available \u2014 copy from the text box below.', 'error');
+    area.select();
+  }
+}
+
+function importPlan() {
+  const raw = document.getElementById('importArea').value.trim();
+  if (!raw) {
+    showMsg('importMsg', 'Paste JSON data first.', 'error');
+    return;
+  }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch(e) {
+    showMsg('importMsg', 'Invalid JSON: ' + e.message, 'error');
+    return;
+  }
+
+  // Strip _instructions and _schema if present (they're for Claude, not for us)
+  delete data._instructions;
+  delete data._schema;
+
+  // Extract the plan object from various formats
+  let newPlan;
+  if (data.plan) {
+    // Wrapper format: { plan: { ... }, completed?, ... }
+    newPlan = data.plan;
+    if (data.completed) {
+      Object.assign(completed, data.completed);
+    }
+  } else if (data.schedule || data.meta || data.llChain || data.mustDos || data.contingencies || data.proTips || data.scheduleUpdates) {
+    // Direct plan format (with or without all sections)
+    newPlan = data;
+  } else {
+    showMsg('importMsg', 'No recognizable plan data found.', 'error');
+    return;
+  }
+
+  // Detect partial vs full update: if schedule is absent, it's partial
+  const isPartial = !newPlan.schedule;
+
+  if (isPartial) {
+    // --- Partial update: merge only provided sections into current planData ---
+
+    // Validate sections that are present
+    if (newPlan.schedule && (!Array.isArray(newPlan.schedule) || newPlan.schedule.length === 0)) {
+      showMsg('importMsg', 'Schedule must be a non-empty array.', 'error');
+      return;
+    }
+    if (newPlan.schedule) {
+      for (let i = 0; i < newPlan.schedule.length; i++) {
+        const item = newPlan.schedule[i];
+        if (!item.id || !item.time || !item.title) {
+          showMsg('importMsg', `Schedule item ${i} missing id, time, or title.`, 'error');
+          return;
+        }
+      }
+    }
+    if (newPlan.llChain && !Array.isArray(newPlan.llChain)) {
+      showMsg('importMsg', 'llChain must be an array.', 'error');
+      return;
+    }
+    if (newPlan.mustDos && !Array.isArray(newPlan.mustDos)) {
+      showMsg('importMsg', 'mustDos must be an array.', 'error');
+      return;
+    }
+    if (newPlan.contingencies && !Array.isArray(newPlan.contingencies)) {
+      showMsg('importMsg', 'contingencies must be an array.', 'error');
+      return;
+    }
+    if (newPlan.proTips && !Array.isArray(newPlan.proTips)) {
+      showMsg('importMsg', 'proTips must be an array.', 'error');
+      return;
+    }
+
+    // Merge: only overwrite sections that are present
+    const updatedParts = [];
+    if (newPlan.meta) { planData.meta = { ...planData.meta, ...newPlan.meta }; updatedParts.push('meta'); }
+    if (newPlan.schedule) { planData.schedule = newPlan.schedule; updatedParts.push('schedule'); }
+    if (newPlan.llChain) { planData.llChain = newPlan.llChain; updatedParts.push('llChain'); }
+    if (newPlan.mustDos) { planData.mustDos = newPlan.mustDos; updatedParts.push('mustDos'); }
+    if (newPlan.contingencies) { planData.contingencies = newPlan.contingencies; updatedParts.push('contingencies'); }
+    if (newPlan.proTips) { planData.proTips = newPlan.proTips; updatedParts.push('proTips'); }
+
+    if (newPlan.scheduleUpdates && Array.isArray(newPlan.scheduleUpdates)) {
+      const notFound = mergeScheduleUpdates(planData.schedule, newPlan.scheduleUpdates);
+      if (notFound.length) {
+        showMsg('importMsg', 'Schedule IDs not found: ' + notFound.join(', '), 'error');
+        return;
+      }
+      updatedParts.push(newPlan.scheduleUpdates.length + ' schedule item(s)');
+    }
+
+    save();
+    localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(planData));
+    render();
+    fetchLiveWaits();
+    showMsg('importMsg', 'Partial update applied: ' + updatedParts.join(', '), 'success');
+
+  } else {
+    // --- Full replacement (existing logic) ---
+
+    // Validate required fields
+    if (!Array.isArray(newPlan.schedule) || newPlan.schedule.length === 0) {
+      showMsg('importMsg', 'Schedule must be a non-empty array.', 'error');
+      return;
+    }
+
+    for (let i = 0; i < newPlan.schedule.length; i++) {
+      const item = newPlan.schedule[i];
+      if (!item.id || !item.time || !item.title) {
+        showMsg('importMsg', `Schedule item ${i} missing id, time, or title.`, 'error');
+        return;
+      }
+    }
+
+    if (!Array.isArray(newPlan.llChain)) {
+      showMsg('importMsg', 'Missing required "llChain" array.', 'error');
+      return;
+    }
+
+    if (!Array.isArray(newPlan.mustDos)) {
+      showMsg('importMsg', 'Missing required "mustDos" array.', 'error');
+      return;
+    }
+
+    // Fill in optional fields with defaults
+    if (!newPlan.meta) {
+      newPlan.meta = { title: 'Disneyland Navigator', date: '', cost: '' };
+    }
+    if (!Array.isArray(newPlan.contingencies)) newPlan.contingencies = [];
+    if (!Array.isArray(newPlan.proTips)) newPlan.proTips = [];
+
+    // Merge completion state: keep completed IDs that exist in new plan, drop orphans
+    const newIds = new Set();
+    newPlan.schedule.forEach(s => newIds.add(s.id));
+    newPlan.mustDos.forEach(m => newIds.add(m.id));
+    newPlan.llChain.forEach(l => { if (l.rideId) newIds.add(l.rideId); });
+
+    const newCompleted = {};
+    for (const id in completed) {
+      if (newIds.has(id)) newCompleted[id] = true;
+    }
+    completed = newCompleted;
+    save();
+
+    // Save plan to localStorage
+    planData = newPlan;
+
+    if (newPlan.scheduleUpdates && Array.isArray(newPlan.scheduleUpdates)) {
+      const notFound = mergeScheduleUpdates(planData.schedule, newPlan.scheduleUpdates);
+      if (notFound.length) {
+        showMsg('importMsg', 'Schedule IDs not found: ' + notFound.join(', '), 'error');
+        return;
+      }
+    }
+
+    localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(planData));
+
+    render();
+    fetchLiveWaits();
+    showMsg('importMsg', 'Plan imported successfully!', 'success');
+  }
+}
+
+function resetPlan() {
+  if (!confirm('Reset to the default built-in plan? Your imported plan data will be removed.')) return;
+
+  localStorage.removeItem(PLAN_STORAGE_KEY);
+  planData = DEFAULT_PLAN;
+
+  // Clean up orphaned completions
+  const validIds = new Set();
+  planData.schedule.forEach(s => validIds.add(s.id));
+  planData.mustDos.forEach(m => validIds.add(m.id));
+  planData.llChain.forEach(l => { if (l.rideId) validIds.add(l.rideId); });
+
+  const cleaned = {};
+  for (const id in completed) {
+    if (validIds.has(id)) cleaned[id] = true;
+  }
+  completed = cleaned;
+  save();
+
+  render();
+  showMsg('resetMsg', 'Reset to default plan.', 'success');
+}
+
+// ── Tabs ──────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-' + tab.dataset.view).classList.add('active');
+  });
+});
+
+// ── Init ──────────────────────────────────────────────
+render();
+fetchLiveWaits();
+// Update current activity every 60s
+setInterval(() => { renderTimeline(); }, 60000);
+// Refresh live wait times every 5 min
+setInterval(fetchLiveWaits, 300000);
+</script>
+</body>
+</html>
