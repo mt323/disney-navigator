@@ -371,7 +371,7 @@ function renderTimeline() {
 
     // Walk connector
     if (item.type === 'walk') {
-      html += `<div class="walk"><span class="walk-dot"></span>${item.title} \u00b7 ${item.wait} min</div>`;
+      html += `<div class="walk" style="animation-delay:${i*40}ms"><span class="walk-dot"></span>${item.title} \u00b7 ${item.wait} min</div>`;
       return;
     }
 
@@ -383,7 +383,7 @@ function renderTimeline() {
     const doneClass = isDone ? 'done' : '';
     const nowClass = isNow ? 'now' : '';
 
-    html += `<div class="card ${methodClass} ${doneClass} ${nowClass}" onclick="openActions('${item.id}')">`;
+    html += `<div class="card ${methodClass} ${doneClass} ${nowClass}" style="animation-delay:${i*40}ms" onclick="openActions('${item.id}')">`;
     html += `<div class="card-top">`;
     html += `<span class="card-time">${item.time}</span>`;
     html += `<span class="card-title">${item.title}</span>`;
@@ -438,7 +438,7 @@ function renderChain() {
 
   chain.forEach((step, i) => {
     const isDone = !!completed[step.rideId];
-    html += `<div class="chain-step ${isDone?'done':''}">`;
+    html += `<div class="chain-step ${isDone?'done':''}" style="animation-delay:${i*60}ms">`;
     html += `<div class="chain-num">${isDone?'\u2713':step.num}</div>`;
     html += '<div class="chain-body">';
     html += `<div class="chain-trigger">${step.trigger}</div>`;
@@ -459,9 +459,9 @@ function renderMustDos() {
   let html = '<div class="section-title">Must-Do Rides</div>';
   html += `<div class="mustdo-progress">${doneCount}/${mustDos.length} must-dos complete</div>`;
 
-  mustDos.forEach(m => {
+  mustDos.forEach((m, i) => {
     const isDone = !!completed[m.id];
-    html += `<div class="mustdo-item ${isDone?'done':''}">`;
+    html += `<div class="mustdo-item ${isDone?'done':''}" style="animation-delay:${i*60}ms">`;
     html += `<button class="mustdo-check ${isDone?'checked':''}" onclick="toggle('${m.id}')" aria-label="Mark complete">${isDone?'\u2713':''}</button>`;
     html += `<span class="mustdo-title">${m.title}</span>`;
     html += `<span class="mustdo-meta">${m.park} \u00b7 ${m.method}</span>`;
@@ -804,9 +804,11 @@ function resetPlan() {
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => { v.classList.remove('active'); v.classList.remove('view-entering'); });
     tab.classList.add('active');
-    document.getElementById('view-' + tab.dataset.view).classList.add('active');
+    const view = document.getElementById('view-' + tab.dataset.view);
+    view.classList.add('active', 'view-entering');
+    view.addEventListener('animationend', () => view.classList.remove('view-entering'), { once: true });
   });
 });
 
