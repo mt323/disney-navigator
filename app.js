@@ -35,32 +35,24 @@ function mergeScheduleUpdates(schedule, updates) {
 }
 
 // ── Live Wait Times ──────────────────────────────────
+const needsProxy = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+
 async function fetchWithCorsRetry(url) {
-  // Try direct first
-  try {
-    const r = await fetch(url);
-    if (r.ok) return r.json();
-  } catch(e) {}
-  // Try each proxy
+  if (!needsProxy) {
+    try { const r = await fetch(url); if (r.ok) return r.json(); } catch(e) {}
+  }
   for (const proxy of CORS_PROXIES) {
-    try {
-      const r = await fetch(proxy(url));
-      if (r.ok) return r.json();
-    } catch(e) {}
+    try { const r = await fetch(proxy(url)); if (r.ok) return r.json(); } catch(e) {}
   }
   return null;
 }
 
 async function fetchWithCorsRetryHTML(url) {
-  try {
-    const r = await fetch(url);
-    if (r.ok) return r.text();
-  } catch(e) {}
+  if (!needsProxy) {
+    try { const r = await fetch(url); if (r.ok) return r.text(); } catch(e) {}
+  }
   for (const proxy of CORS_PROXIES) {
-    try {
-      const r = await fetch(proxy(url));
-      if (r.ok) return r.text();
-    } catch(e) {}
+    try { const r = await fetch(proxy(url)); if (r.ok) return r.text(); } catch(e) {}
   }
   return null;
 }
