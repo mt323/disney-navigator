@@ -27,6 +27,43 @@ const LL_RIDE_IDS = {
   273: 'buzz',
 };
 
+// ── LL Strategy Context (for Claude export prompt) ───
+const LL_STRATEGY_CONTEXT = {
+  rules: [
+    'Can only hold 1 LL booking at a time',
+    'After tapping in, can immediately book next LL',
+    '2-hour rule: if return window is 2+ hours away, can book next LL 120 min after last booking without tapping in',
+    'Each return window is 1 hour long',
+    'Cross-park booking is allowed (book DL ride while at DCA)',
+    'Tap at the second touchpoint (right before loading) to book next a few minutes earlier',
+  ],
+  demand: {
+    'space-mountain':  { level: 5, note: 'Highest demand at DL. Windows push 2-3hr out by mid-afternoon. Book ASAP.' },
+    'big-thunder':     { level: 4, note: 'Slots fill in 5-15 min. High demand.' },
+    'guardians':       { level: 4, note: 'Highest demand at DCA. First booking at entry usually gets close window.' },
+    'matterhorn':      { level: 4, note: 'Slots fill in 5-15 min. Similar to Big Thunder.' },
+    'soarin':          { level: 4, note: 'Morning sells out fast, afternoon recovery around 1-2pm.' },
+    'tianas':          { level: 3, note: 'Sells out mid-morning, afternoon slots reappear ~1pm.' },
+    'haunted-mansion': { level: 2, note: 'Morning available, midday gap, afternoon recovery.' },
+    'incredicoaster':  { level: 2, note: 'Better availability than Guardians. Moderate demand.' },
+    'buzz':            { level: 1, note: 'Only 24 min standby avg. Often immediate return. Easiest LL.' },
+  },
+  geography: {
+    crossParkWalk: 25,
+    dcaAreas: { 'guardians': 'Avengers Campus', 'incredicoaster': 'Pixar Pier', 'soarin': 'Grizzly Peak' },
+    dlAreas: {
+      'tianas': 'Critter Country', 'haunted-mansion': 'New Orleans Sq', 'big-thunder': 'Frontierland',
+      'space-mountain': 'Tomorrowland', 'matterhorn': 'Fantasyland', 'buzz': 'Tomorrowland',
+    },
+    dlWalkTimes: {
+      'Critter Country → New Orleans Sq': 3, 'New Orleans Sq → Frontierland': 3,
+      'Frontierland → Tomorrowland': 10, 'Tomorrowland → Fantasyland': 5,
+      'Critter Country → Tomorrowland': 12, 'Fantasyland → Tomorrowland': 5,
+    },
+  },
+  keyInsight: 'The goal is to minimize "block time" — time between booking an LL and being able to book the next one. You can only hold 1 LL at a time, so every minute blocked is a minute you can\'t progress the chain. Book rides whose windows are closest to when you\'d arrive. Protect high-demand rides (Space Mountain, Big Thunder) from selling out by booking them before their windows push too far.',
+};
+
 // ── Default Plan Data ─────────────────────────────────
 const DEFAULT_PLAN = {
   version: 1,

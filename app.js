@@ -1013,6 +1013,22 @@ function buildFullExportJSON(includeLive) {
     }
   }
 
+  // Include LL demand levels and chain progress
+  exportData.llDemandLevels = LL_STRATEGY_CONTEXT.demand;
+
+  const chainProgress = planData.llChain.map(step => ({
+    num: step.num,
+    ride: step.ride,
+    rideId: step.rideId,
+    status: completed[step.rideId] ? 'done' : securedLL[step.rideId] ? 'booked' : 'pending',
+    ...(securedLL[step.rideId] ? { bookedWindow: formatSecuredTime(securedLL[step.rideId]) } : {}),
+  }));
+  exportData.llChainProgress = {
+    _note: 'Current status of each LL chain step. "done" = tapped in and completed. "booked" = LL secured, waiting for window. "pending" = not yet booked.',
+    steps: chainProgress,
+    nextToBook: chainProgress.find(s => s.status === 'pending')?.rideId || null,
+  };
+
   // Include wishlisted rides
   if (Object.keys(rideWishlist).length > 0) {
     exportData.wishlistRides = {
@@ -1064,12 +1080,28 @@ function exportPlan() {
     prompt += `The wishlisted rides in the data are ones I want to do \u2014 work them into the plan if possible.\n\n`;
   }
 
-  prompt += `Based on the current data (live wait times, LL return windows, secured LL windows, completed rides, and wishlisted rides), give me the best updated plan. Keep all completed rides in the schedule (the app needs them). Only reorganize and optimize the remaining rides. Optimize for:\n`;
-  prompt += `- Minimizing wait times by hitting low-wait rides first\n`;
-  prompt += `- Using LL windows effectively\n`;
-  prompt += `- The securedLLWindows show LL return windows I've already booked — respect these times\n`;
-  prompt += `- Fitting in wishlisted rides where they make sense\n`;
-  prompt += `- Keeping a good pace without burnout\n\n`;
+  prompt += `Based on the current data, give me the best updated plan. Focus especially on LL CHAIN OPTIMIZATION:\n\n`;
+  prompt += `## LL Booking Rules\n`;
+  LL_STRATEGY_CONTEXT.rules.forEach(r => { prompt += `- ${r}\n`; });
+  prompt += `\n## Key Insight\n${LL_STRATEGY_CONTEXT.keyInsight}\n\n`;
+  prompt += `## Ride Demand Levels (1-5)\n`;
+  for (const [id, d] of Object.entries(LL_STRATEGY_CONTEXT.demand)) {
+    prompt += `- ${id}: ${d.level}/5 — ${d.note}\n`;
+  }
+  prompt += `\n## Geography\n- Cross-park walk: ~${LL_STRATEGY_CONTEXT.geography.crossParkWalk} min\n`;
+  prompt += `- Minimize park crossings. Group same-park LL rides.\n\n`;
+  prompt += `## What to optimize\n`;
+  prompt += `1. Look at the llReturnWindows — these are the CURRENT next-available windows for each ride\n`;
+  prompt += `2. Look at the securedLLWindows — these are windows I've already booked (respect these)\n`;
+  prompt += `3. Figure out the best ORDER to book remaining LL rides based on:\n`;
+  prompt += `   - Which windows are closest to "now" (minimize block time)\n`;
+  prompt += `   - Which high-demand rides might sell out if delayed\n`;
+  prompt += `   - Geographic efficiency (minimize walking, especially cross-park)\n`;
+  prompt += `   - The 2-hour rule: if a window is 2+ hours out, I can book the next LL 120 min after my last booking\n`;
+  prompt += `4. Output an updated llChain with the new order\n`;
+  prompt += `5. Adjust the schedule to match the new LL chain order (reorder rides, update times and walk segments)\n`;
+  prompt += `6. Keep all completed rides in the schedule\n`;
+  prompt += `7. Keep non-LL rides (SR, standby) where they make geographic sense between LL rides\n\n`;
   prompt += json;
 
   // Show in textarea as fallback
