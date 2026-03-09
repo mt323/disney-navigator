@@ -72,6 +72,17 @@ const WISHLIST_KEY = 'disney-ride-wishlist';
 try { rideWishlist = JSON.parse(localStorage.getItem(WISHLIST_KEY)) || {}; } catch(e) {}
 function saveWishlist() { localStorage.setItem(WISHLIST_KEY, JSON.stringify(rideWishlist)); }
 
+// ── Excluded Rides (unchecked plan rides) ────────────
+let excludedRides = {};
+const EXCLUDED_KEY = 'disney-excluded-rides';
+try { excludedRides = JSON.parse(localStorage.getItem(EXCLUDED_KEY)) || {}; } catch(e) {}
+function saveExcluded() { localStorage.setItem(EXCLUDED_KEY, JSON.stringify(excludedRides)); }
+
+// ── Departure Time ───────────────────────────────────
+const DEPARTURE_KEY = 'disney-departure-time';
+let departureTime = localStorage.getItem(DEPARTURE_KEY) || '20:30';
+function saveDepartureTime(val) { departureTime = val; localStorage.setItem(DEPARTURE_KEY, val); }
+
 function normalizeRideName(name) {
   return name.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
 }
@@ -265,6 +276,13 @@ function updateLLSlotsStatus(matchCount, error) {
   }
 }
 
+function formatDepartureTime(time24) {
+  if (!time24) return '8:30';
+  const [h, m] = time24.split(':').map(Number);
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, '0')}`;
+}
+
 function formatLLTime(time24) {
   if (!time24) return null;
   const [h, m] = time24.split(':').map(Number);
@@ -430,7 +448,8 @@ function renderTimeline() {
       if (currentPark === 'dca') {
         html += '<div class="park-banner dca">\uD83C\uDFD6\uFE0F Disney California Adventure<span class="park-time">11:00 \u2013 1:55</span></div>';
       } else {
-        html += '<div class="park-banner dl">\uD83C\uDFF0 Disneyland Park<span class="park-time">2:00 \u2013 8:30</span></div>';
+        const depFormatted = formatDepartureTime(departureTime);
+        html += `<div class="park-banner dl">\uD83C\uDFF0 Disneyland Park<span class="park-time">2:00 \u2013 ${depFormatted}</span></div>`;
       }
     }
 
@@ -710,8 +729,26 @@ function isMustDoRide(rideName) {
 }
 
 function toggleWishlist(key) {
-  rideWishlist[key] ? delete rideWishlist[key] : rideWishlist[key] = true;
-  saveWishlist();
+  // Find ride name for this key to check if it's in the plan
+  let rideName = null;
+  ['dca','dl'].forEach(park => {
+    if (!allRides[park]) return;
+    allRides[park].forEach(landGroup => {
+      landGroup.rides.forEach(r => {
+        if ((r.park + '-' + r.id) === key) rideName = r.name;
+      });
+    });
+  });
+  const inPlan = rideName && isPlanRide(rideName);
+
+  if (inPlan) {
+    // Toggle excluded state instead of wishlist
+    excludedRides[key] ? delete excludedRides[key] : excludedRides[key] = true;
+    saveExcluded();
+  } else {
+    rideWishlist[key] ? delete rideWishlist[key] : rideWishlist[key] = true;
+    saveWishlist();
+  }
   renderRides();
 }
 
@@ -791,12 +828,13 @@ function renderRidesPark(park) {
 function renderRideRow(ride, isMustDoSection) {
   const key = ride.park + '-' + ride.id;
   const inPlan = isPlanRide(ride.name);
-  const wishlisted = !!rideWishlist[key] || inPlan;
+  const isExcluded = !!excludedRides[key];
+  const wishlisted = (!!rideWishlist[key] || inPlan) && !isExcluded;
   const mustDo = isMustDoRide(ride.name);
   const llData = findRideLL(ride);
 
   const done = isPlanRideDone(ride.name);
-  let html = `<div class="ride-row${inPlan ? ' in-plan' : ''}${done ? ' ride-done' : ''}">`;
+  let html = `<div class="ride-row${inPlan ? ' in-plan' : ''}${done ? ' ride-done' : ''}${isExcluded ? ' ride-excluded' : ''}">`;
 
   // Checkbox
   html += `<button class="ride-check${wishlisted ? ' checked' : ''}" onclick="event.stopPropagation();toggleWishlist('${key}')">${wishlisted ? '✓' : ''}</button>`;
@@ -973,6 +1011,44 @@ function buildFullExportJSON(includeLive) {
   delete exportData.plan.contingencies;
   delete exportData.plan.proTips;
 
+  // Filter out excluded rides from the exported plan
+  if (Object.keys(excludedRides).length > 0) {
+    // Build a set of excluded ride names for matching against plan schedule IDs
+    const excludedNames = new Set();
+    ['dca','dl'].forEach(park => {
+      if (!allRides[park]) return;
+      allRides[park].forEach(landGroup => {
+        landGroup.rides.forEach(r => {
+          const key = r.park + '-' + r.id;
+          if (excludedRides[key]) excludedNames.add(r.name);
+        });
+      });
+    });
+    // Filter schedule: remove excluded rides (and their preceding walk)
+    if (excludedNames.size > 0) {
+      const filtered = [];
+      for (let i = 0; i < exportData.plan.schedule.length; i++) {
+        const item = exportData.plan.schedule[i];
+        if (item.type === 'ride') {
+          const isExcl = [...excludedNames].some(n => similarityScore(n, item.title) >= 0.5);
+          if (isExcl) continue;
+        }
+        filtered.push(item);
+      }
+      exportData.plan.schedule = filtered;
+      // Also filter mustDos
+      if (exportData.plan.mustDos) {
+        exportData.plan.mustDos = exportData.plan.mustDos.filter(m => {
+          return ![...excludedNames].some(n => similarityScore(n, m.title) >= 0.5);
+        });
+      }
+    }
+    exportData.excludedRides = {
+      _note: 'These rides were manually unchecked by the user and should NOT be scheduled.',
+      rides: Object.keys(excludedRides)
+    };
+  }
+
   // Include live wait times if requested
   if (includeLive && Object.keys(liveWaits).length > 0) {
     exportData.liveWaitTimes = {
@@ -1090,6 +1166,40 @@ function exportPlan() {
   }
   prompt += `\n## Geography\n- Cross-park walk: ~${LL_STRATEGY_CONTEXT.geography.crossParkWalk} min\n`;
   prompt += `- Minimize park crossings. Group same-park LL rides.\n\n`;
+
+  // Historical trends
+  prompt += `## Historical Wait Time Trends (March Monday)\n`;
+  prompt += `| Ride | Avg | 8-9 | 9-11 | 11-1 | 1-4 | 4-6 | 6-8 | 8+ | Best Time |\n`;
+  prompt += `|------|-----|-----|------|------|-----|-----|-----|----|-----------|\n`;
+  for (const [id, t] of Object.entries(HISTORICAL_TRENDS)) {
+    const hourlyStr = t.hourly.map(h => h.wait).join(' | ');
+    prompt += `| ${t.name} | ${t.marchMondayAvg} | ${hourlyStr} | ${t.bestTime} |\n`;
+  }
+  prompt += `\n`;
+
+  // LL sellout patterns
+  prompt += `## LL Window Sellout Patterns\n`;
+  for (const [id, pattern] of Object.entries(LL_SELLOUT_PATTERNS)) {
+    prompt += `- ${id}: ${pattern}\n`;
+  }
+  prompt += `\n`;
+
+  // Prediction instructions
+  prompt += `## Prediction Instructions\n`;
+  prompt += `- Do NOT base your plan solely on current wait times/LL windows\n`;
+  prompt += `- Use the hourly trends to PREDICT what waits and LL windows will be at the TIME each ride is scheduled\n`;
+  prompt += `- Example: If scheduling Space Mountain at 4pm, expect ~60 min standby (not the current 30 min at 11am)\n`;
+  prompt += `- Factor in that LL windows push further out as the day progresses — high-demand rides (Space Mountain, Big Thunder) may be 2-3 hours out by mid-afternoon\n\n`;
+
+  // Expert strategies
+  prompt += `## Expert Strategies\n`;
+  EXPERT_STRATEGIES.forEach(s => { prompt += `- ${s}\n`; });
+  prompt += `\n`;
+
+  // Departure time constraint
+  prompt += `## Constraints\n`;
+  prompt += `- Must leave park by ${formatDepartureTime(departureTime)} (${departureTime})\n\n`;
+
   prompt += `## What to optimize\n`;
   prompt += `1. Look at the llReturnWindows — these are the CURRENT next-available windows for each ride\n`;
   prompt += `2. Look at the securedLLWindows — these are windows I've already booked (respect these)\n`;
@@ -1323,6 +1433,16 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // ── Init ──────────────────────────────────────────────
+// Initialize departure time input
+const depInput = document.getElementById('departureTime');
+if (depInput) {
+  depInput.value = departureTime;
+  depInput.addEventListener('input', (e) => {
+    saveDepartureTime(e.target.value);
+    renderTimeline();
+  });
+}
+
 render();
 fetchLiveWaits();
 // Update current activity every 60s

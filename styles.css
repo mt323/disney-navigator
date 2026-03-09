@@ -450,6 +450,12 @@ details[open] summary::before { transform:rotate(90deg); }
   color:#000;
 }
 .btn-danger { background:rgba(64,24,24,0.6); color:#e05050; border:1px solid #602020; }
+.departure-time-input {
+  width:100%; padding:10px 14px; background:rgba(20,20,44,0.6); border:1px solid var(--border);
+  border-radius:var(--radius); color:var(--text); font-size:16px; font-family:'DM Sans',sans-serif;
+  color-scheme:dark; outline:none;
+}
+.departure-time-input:focus { border-color:var(--gold); box-shadow:0 0 8px var(--gold-glow); }
 .settings-btns { display:flex; gap:10px; flex-wrap:wrap; }
 .settings-msg {
   font-size:12px; margin-top:8px; padding:6px 10px; border-radius:6px;
@@ -555,6 +561,15 @@ details[open] summary::before { transform:rotate(90deg); }
 .ride-sr { font-size:10px; color:var(--text-dim); opacity:0.7; }
 .ride-ll { font-size:10px; color:#40c870; white-space:nowrap; }
 .ride-ll-none { color:#e05050; opacity:0.7; }
+
+.ride-row.ride-excluded {
+  opacity: 0.4;
+  border-left-color: #e05050;
+}
+.ride-row.ride-excluded .ride-name {
+  text-decoration: line-through;
+  text-decoration-color: rgba(224, 80, 80, 0.5);
+}
 
 .rides-wishlist-count {
   font-size:11px; color:var(--text-dim); text-align:center; padding:8px 0; margin-top:8px;
