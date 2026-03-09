@@ -1165,6 +1165,11 @@ function exportPlan() {
   }
   prompt += `\n## Geography\n- Cross-park walk: ~${LL_STRATEGY_CONTEXT.geography.crossParkWalk} min\n`;
   prompt += `- Minimize park crossings. Group same-park LL rides.\n\n`;
+  prompt += `## DL Walk Times Between Areas\n`;
+  for (const [route, mins] of Object.entries(LL_STRATEGY_CONTEXT.geography.dlWalkTimes)) {
+    prompt += `- ${route}: ${mins} min\n`;
+  }
+  prompt += `\nOptimal DL routing is a southwest-to-northeast sweep: Adventureland → NOS → Frontierland → Fantasyland → Tomorrowland → Galaxy's Edge. Any LL chain reorder that breaks this flow costs more in walking than it saves in LL windows.\n\n`;
 
   // Historical trends
   prompt += `## Historical Wait Time Trends (March Monday)\n`;
@@ -1194,6 +1199,19 @@ function exportPlan() {
   prompt += `## Expert Strategies\n`;
   EXPERT_STRATEGIES.forEach(s => { prompt += `- ${s}\n`; });
   prompt += `\n`;
+
+  // SM window expectations
+  prompt += `## SM Window Expectations by Booking Time\n`;
+  prompt += `- Book at ~3:30-3:45pm (LL#6 tap): Best 4:30-5:00, Likely 5:00-5:30, Worst 6:00-7:00\n`;
+  prompt += `- Book at ~4:15pm: windows push 30-45 min later than above\n`;
+  prompt += `- The earlier you complete DCA → the earlier you tap BTM → the better SM windows\n\n`;
+
+  // Schedule flexibility
+  prompt += `## Schedule Flexibility\n`;
+  prompt += `- Pirates can be deferred to after Rise (~8pm+) for only 15 min wait, saving ~12 min in afternoon crunch\n`;
+  prompt += `- Rise at 8pm instead of 6:40pm saves 10-12 min (50 vs 60 min). Park open until 11pm\n`;
+  prompt += `- Star Tours between BTM and SM is a deliberate buffer — fills SM window gaps. Can be skipped if SM window is early\n`;
+  prompt += `- Tiana's drops to 10-20 min near closing — can be moved to standby at 9:30pm+ to free LL slot #4 if chain is compromised\n\n`;
 
   // Mitigation strategies
   prompt += `## Mitigation Strategies\n`;

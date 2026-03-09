@@ -342,6 +342,7 @@ const MITIGATION_STRATEGIES = {
       'Modify/refresh trick: after booking, repeatedly pull-to-refresh the modify screen to snag cancelled slots (5 min patience = ~100% success)',
       'If window pushes past 5:30pm: Star Tours (4:18-4:48) fills the gap. Ride SM when window opens, continue chain from there',
       '2-hour rule backup: kicks in at ~5:48 for booking Matterhorn without tapping SM',
+      'If SM window is firmly 6:00+, reorder northeast block: Star Tours → Mr. Toad → Matterhorn LL → Buzz LL → then SM LL → Galaxy\'s Edge. Adds only ~5 min extra walking.',
     ],
   },
   'rise': {
