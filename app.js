@@ -449,7 +449,7 @@ function renderTimeline() {
         html += '<div class="park-banner dca">\uD83C\uDFD6\uFE0F Disney California Adventure<span class="park-time">11:00 \u2013 1:55</span></div>';
       } else {
         const depFormatted = formatDepartureTime(departureTime);
-        html += `<div class="park-banner dl">\uD83C\uDFF0 Disneyland Park<span class="park-time">2:00 \u2013 ${depFormatted}</span></div>`;
+        html += `<div class="park-banner dl">\uD83C\uDFF0 Disneyland Park<span class="park-time">1:55 \u2013 ${depFormatted}</span></div>`;
       }
     }
 
@@ -1008,7 +1008,6 @@ function buildFullExportJSON(includeLive) {
   // Remove version from plan level if it exists (it's at top level)
   delete exportData.plan.version;
   // Remove clutter from exported plan
-  delete exportData.plan.contingencies;
   delete exportData.plan.proTips;
 
   // Filter out excluded rides from the exported plan
@@ -1195,6 +1194,21 @@ function exportPlan() {
   prompt += `## Expert Strategies\n`;
   EXPERT_STRATEGIES.forEach(s => { prompt += `- ${s}\n`; });
   prompt += `\n`;
+
+  // Mitigation strategies
+  prompt += `## Mitigation Strategies\n`;
+  prompt += `Use these when re-optimizing. If a ride has issues, apply the relevant mitigation rather than just dropping it.\n\n`;
+  for (const [id, strat] of Object.entries(MITIGATION_STRATEGIES)) {
+    const label = id === 'general' ? 'General (any LL)' : strat.issue;
+    if (strat.risk) {
+      prompt += `### ${id} [${strat.risk} risk]\n`;
+    } else {
+      prompt += `### ${label}\n`;
+    }
+    prompt += `Issue: ${strat.issue}\n`;
+    strat.mitigations.forEach(m => { prompt += `- ${m}\n`; });
+    prompt += `\n`;
+  }
 
   // Departure time constraint
   prompt += `## Constraints\n`;

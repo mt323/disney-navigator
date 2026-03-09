@@ -333,6 +333,53 @@ const EXPERT_STRATEGIES = [
   'High-capacity fillers for midday: Pirates (20-30 min), Mr. Toad (15-20 min), Star Tours (20-35 min), Buzz (15-25 min)',
 ];
 
+// ── Mitigation Strategies (per-ride contingency plans) ─
+const MITIGATION_STRATEGIES = {
+  'space-mountain': {
+    risk: 'HIGH',
+    issue: 'LL #7 — window often pushes to 5:00+ on Mondays (busiest day, 49 min avg standby)',
+    mitigations: [
+      'Modify/refresh trick: after booking, repeatedly pull-to-refresh the modify screen to snag cancelled slots (5 min patience = ~100% success)',
+      'If window pushes past 5:30pm: Star Tours (4:18-4:48) fills the gap. Ride SM when window opens, continue chain from there',
+      '2-hour rule backup: kicks in at ~5:48 for booking Matterhorn without tapping SM',
+    ],
+  },
+  'rise': {
+    risk: 'MEDIUM',
+    issue: 'Standby can spike above 70 min despite evening dip trend',
+    mitigations: [
+      'Check app at 6:00pm — Monday evenings usually dip to 45-55 min by 6:30-7:00pm',
+      'If 70+ at 6:30, adjust dinner timing or substitute Star Tours',
+      'YoY declining (86→59 min avg) — trend favors lower waits in 2026',
+    ],
+  },
+  'haunted-mansion': {
+    risk: 'MEDIUM',
+    issue: 'May have Virtual Queue due to construction',
+    mitigations: [
+      'If VQ active: drop from LL chain. Book Tiana\'s → Big Thunder → SM → Matterhorn → Buzz → Star Tours',
+      'Join HM VQ separately in the app when a boarding group drops',
+    ],
+  },
+  'big-thunder': {
+    risk: 'MEDIUM',
+    issue: 'LL slots fill in 5-15 min windows',
+    mitigations: [
+      'Book immediately after tapping Haunted Mansion — do not delay',
+      'If sold out: use 2-hour rule to skip ahead in chain, come back to Big Thunder standby (35-38 min at 3-4pm)',
+    ],
+  },
+  'general': {
+    risk: null,
+    issue: 'LL return window pushed 2+ hours out',
+    mitigations: [
+      '2-hour rule: book next LL exactly 120 min after last booking without needing to tap in',
+      'Fill gap with standby fillers: Pirates (25 min), Mr. Toad (20 min), Star Tours (30 min), Buzz (15-25 min)',
+      'Modify/refresh trick works on any LL — not just Space Mountain',
+    ],
+  },
+};
+
 // ── Default Plan Data ─────────────────────────────────
 const DEFAULT_PLAN = {
   version: 1,
@@ -354,23 +401,23 @@ const DEFAULT_PLAN = {
     {id:'incredicoaster',time:'12:30',m:750,title:'Incredicoaster',park:'dca',type:'ride',method:'ll',wait:5,isMustDo:false,llNote:'Tap in \u2192 book LL #3: Soarin\' Over California',hasSr:true},
     {id:'walk-grizzly',time:'12:40',m:760,title:'Walk to Grizzly Peak',park:'dca',type:'walk',method:null,wait:7,isMustDo:false,llNote:null},
     {id:'soarin',time:'12:50',m:770,title:'Soarin\' Over California',park:'dca',type:'ride',method:'ll',wait:10,isMustDo:false,llNote:'Tap in \u2192 book LL #4: Tiana\'s Bayou Adventure (Disneyland!)'},
-    {id:'lunch',time:'1:05',m:785,title:'Lunch \u2014 San Fransokyo Square',park:'dca',type:'meal',method:null,wait:30,isMustDo:false,llNote:null},
-    {id:'walk-disneyland',time:'1:35',m:815,title:'Walk to Disneyland',park:'dca',type:'walk',method:null,wait:25,isMustDo:false,llNote:null},
+    {id:'lunch',time:'1:05',m:785,title:'Lunch \u2014 San Fransokyo Square',park:'dca',type:'meal',method:null,wait:25,isMustDo:false,llNote:null},
+    {id:'walk-disneyland',time:'1:30',m:810,title:'Walk to Disneyland',park:'dca',type:'walk',method:null,wait:25,isMustDo:false,llNote:null},
 
     // Disneyland
-    {id:'enter-dl',time:'2:00',m:840,title:'Enter Disneyland \u2014 Walk to Adventureland',park:'dl',type:'action',method:null,wait:7,isMustDo:false,llNote:null},
-    {id:'indiana-jones',time:'2:10',m:850,title:'Indiana Jones Adventure',park:'dl',type:'ride',method:'sr',wait:18,isMustDo:true,llNote:null},
-    {id:'walk-critter',time:'2:33',m:873,title:'Walk to Critter Country',park:'dl',type:'walk',method:null,wait:5,isMustDo:false,llNote:null},
-    {id:'tianas',time:'2:40',m:880,title:'Tiana\'s Bayou Adventure',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:false,llNote:'Tap in \u2192 book LL #5: Haunted Mansion'},
-    {id:'walk-neworleans',time:'2:53',m:893,title:'Walk to New Orleans Square',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
-    {id:'haunted-mansion',time:'2:58',m:898,title:'Haunted Mansion',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #6: Big Thunder'},
-    {id:'pirates',time:'3:11',m:911,title:'Pirates of the Caribbean',park:'dl',type:'ride',method:'standby',wait:22,isMustDo:false,llNote:null},
-    {id:'walk-frontier',time:'3:36',m:936,title:'Walk to Frontierland',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
-    {id:'big-thunder',time:'3:41',m:941,title:'Big Thunder Mountain',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #7: Space Mountain'},
-    {id:'walk-tomorrow1',time:'3:54',m:954,title:'Walk to Tomorrowland',park:'dl',type:'walk',method:null,wait:10,isMustDo:false,llNote:null},
-    {id:'space-mountain',time:'4:06',m:966,title:'Space Mountain',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #8: Matterhorn'},
-    {id:'walk-startours',time:'4:19',m:979,title:'Walk to Star Tours',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
-    {id:'star-tours',time:'4:22',m:982,title:'Star Tours',park:'dl',type:'ride',method:'standby',wait:28,isMustDo:false,llNote:null},
+    {id:'enter-dl',time:'1:55',m:835,title:'Enter Disneyland \u2014 Walk to Adventureland',park:'dl',type:'action',method:null,wait:7,isMustDo:false,llNote:null},
+    {id:'indiana-jones',time:'2:05',m:845,title:'Indiana Jones Adventure',park:'dl',type:'ride',method:'sr',wait:18,isMustDo:true,llNote:null},
+    {id:'walk-critter',time:'2:25',m:865,title:'Walk to Critter Country',park:'dl',type:'walk',method:null,wait:5,isMustDo:false,llNote:null},
+    {id:'tianas',time:'2:35',m:875,title:'Tiana\'s Bayou Adventure',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:false,llNote:'Tap in \u2192 book LL #5: Haunted Mansion'},
+    {id:'walk-neworleans',time:'2:48',m:888,title:'Walk to New Orleans Square',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
+    {id:'haunted-mansion',time:'2:53',m:893,title:'Haunted Mansion',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #6: Big Thunder'},
+    {id:'pirates',time:'3:06',m:906,title:'Pirates of the Caribbean',park:'dl',type:'ride',method:'standby',wait:25,isMustDo:false,llNote:null},
+    {id:'walk-frontier',time:'3:33',m:933,title:'Walk to Frontierland',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
+    {id:'big-thunder',time:'3:38',m:938,title:'Big Thunder Mountain',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #7: Space Mountain'},
+    {id:'walk-tomorrow1',time:'3:50',m:950,title:'Walk to Tomorrowland',park:'dl',type:'walk',method:null,wait:10,isMustDo:false,llNote:null},
+    {id:'space-mountain',time:'4:02',m:962,title:'Space Mountain',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:true,llNote:'Tap in \u2192 book LL #8: Matterhorn'},
+    {id:'walk-startours',time:'4:15',m:975,title:'Walk to Star Tours',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
+    {id:'star-tours',time:'4:18',m:978,title:'Star Tours',park:'dl',type:'ride',method:'standby',wait:30,isMustDo:false,llNote:null},
     {id:'walk-fantasy',time:'4:50',m:1010,title:'Walk to Fantasyland',park:'dl',type:'walk',method:null,wait:5,isMustDo:false,llNote:null},
     {id:'matterhorn',time:'4:57',m:1017,title:'Matterhorn Bobsleds',park:'dl',type:'ride',method:'ll',wait:10,isMustDo:false,llNote:'Tap in \u2192 book LL #9: Buzz Lightyear',hasSr:true},
     {id:'walk-mrtoads',time:'5:10',m:1030,title:'Walk to Mr. Toad\'s',park:'dl',type:'walk',method:null,wait:3,isMustDo:false,llNote:null},
@@ -378,23 +425,23 @@ const DEFAULT_PLAN = {
     {id:'walk-tomorrow2',time:'5:33',m:1053,title:'Walk to Tomorrowland',park:'dl',type:'walk',method:null,wait:5,isMustDo:false,llNote:null},
     {id:'buzz',time:'5:40',m:1060,title:'Buzz Lightyear Astro Blasters',park:'dl',type:'ride',method:'ll',wait:5,isMustDo:false,llNote:null},
     {id:'walk-galaxy',time:'5:48',m:1068,title:'Walk to Galaxy\'s Edge',park:'dl',type:'walk',method:null,wait:8,isMustDo:false,llNote:null},
-    {id:'smugglers-run',time:'5:58',m:1078,title:'Smuggler\'s Run',park:'dl',type:'ride',method:'sr',wait:10,isMustDo:false,llNote:null},
+    {id:'smugglers-run',time:'5:58',m:1078,title:'Smuggler\'s Run',park:'dl',type:'ride',method:'sr',wait:12,isMustDo:false,llNote:null},
     {id:'dinner',time:'6:11',m:1091,title:'Dinner \u2014 Docking Bay 7',park:'dl',type:'meal',method:null,wait:35,isMustDo:false,llNote:null},
-    {id:'rise',time:'6:48',m:1128,title:'Rise of the Resistance',park:'dl',type:'ride',method:'standby',wait:64,isMustDo:true,llNote:null},
-    {id:'rise-experience',time:'7:52',m:1192,title:'Experience Rise (pre-shows)',park:'dl',type:'action',method:null,wait:null,isMustDo:false,llNote:null},
+    {id:'rise',time:'6:48',m:1128,title:'Rise of the Resistance',park:'dl',type:'ride',method:'standby',wait:60,isMustDo:true,llNote:null},
+    {id:'rise-experience',time:'7:48',m:1188,title:'Experience Rise (pre-shows)',park:'dl',type:'action',method:null,wait:null,isMustDo:false,llNote:null},
     {id:'free-time',time:'8:10',m:1210,title:'Main Street shopping, churros',park:'dl',type:'action',method:null,wait:20,isMustDo:false,llNote:null},
     {id:'head-out',time:'8:30',m:1230,title:'Head out!',park:'dl',type:'action',method:null,wait:null,isMustDo:false,llNote:null},
   ],
   llChain: [
-    {num:1,trigger:'11:00 (park entry)',ride:'Guardians: Mission BREAKOUT',park:'dca',rideId:'guardians'},
-    {num:2,trigger:'Tap Guardians',ride:'Incredicoaster',park:'dca',rideId:'incredicoaster'},
-    {num:3,trigger:'Tap Incredicoaster',ride:'Soarin\' Over California',park:'dca',rideId:'soarin',note:null},
-    {num:4,trigger:'Tap Soarin\'',ride:'Tiana\'s Bayou Adventure',park:'dl',rideId:'tianas',note:'Cross-park book \u2014 the key move'},
-    {num:5,trigger:'Tap Tiana\'s',ride:'Haunted Mansion',park:'dl',rideId:'haunted-mansion'},
-    {num:6,trigger:'Tap Haunted Mansion',ride:'Big Thunder Mountain',park:'dl',rideId:'big-thunder'},
-    {num:7,trigger:'Tap Big Thunder',ride:'Space Mountain',park:'dl',rideId:'space-mountain'},
-    {num:8,trigger:'Tap Space Mountain',ride:'Matterhorn Bobsleds',park:'dl',rideId:'matterhorn'},
-    {num:9,trigger:'Tap Matterhorn',ride:'Buzz Lightyear Astro Blasters',park:'dl',rideId:'buzz'},
+    {num:1,trigger:'11:00 (park entry)',ride:'Guardians: Mission BREAKOUT',park:'dca',rideId:'guardians',note:'Window ~11:30-12:00'},
+    {num:2,trigger:'Tap Guardians',ride:'Incredicoaster',park:'dca',rideId:'incredicoaster',note:'Window ~12:00-12:30'},
+    {num:3,trigger:'Tap Incredicoaster',ride:'Soarin\' Over California',park:'dca',rideId:'soarin',note:'Window ~12:30-1:00'},
+    {num:4,trigger:'Tap Soarin\'',ride:'Tiana\'s Bayou Adventure',park:'dl',rideId:'tianas',note:'Cross-park book. Window ~2:00-2:30'},
+    {num:5,trigger:'Tap Tiana\'s',ride:'Haunted Mansion',park:'dl',rideId:'haunted-mansion',note:'Window ~2:45-3:15'},
+    {num:6,trigger:'Tap Haunted Mansion',ride:'Big Thunder Mountain',park:'dl',rideId:'big-thunder',note:'Slots fill fast. Window ~3:15-3:45'},
+    {num:7,trigger:'Tap Big Thunder',ride:'Space Mountain',park:'dl',rideId:'space-mountain',note:'Hardest LL \u2014 window may push to 5:00+. Use modify/refresh trick'},
+    {num:8,trigger:'Tap Space Mountain',ride:'Matterhorn Bobsleds',park:'dl',rideId:'matterhorn',note:'Window ~5:00-5:30. 2-hour rule backup at ~5:48'},
+    {num:9,trigger:'Tap Matterhorn',ride:'Buzz Lightyear Astro Blasters',park:'dl',rideId:'buzz',note:'Easiest LL. Often immediate return'},
   ],
   mustDos: [
     {id:'radiator-springs',title:'Radiator Springs Racers',park:'DCA',method:'SR'},
